@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "yomochi.fullname" . }}-insight-worker
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: insight-worker
+spec:
+  replicas: {{ .Values.insightWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "yomochi.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: insight-worker
+  template:
+    metadata:
+      labels:
+        {{- include "yomochi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: insight-worker
+    spec:
+      serviceAccountName: {{ include "yomochi.serviceAccountName" . }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: insight-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.main.insight.main
+          envFrom:
+            - configMapRef:
+                name: {{ include "yomochi.fullname" . }}
+            {{- if .Values.existingSecret }}
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+            {{- end }}
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import app"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.insightWorker.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp

@@ -1,0 +1,5 @@
+{"question": "How much did I spend on food last month?", "must_contain_any": ["food", "Food", "dining"]}
+{"question": "What was my biggest spending category?", "must_contain_any": ["category", "spending", "%"]}
+{"question": "Did my income change recently?", "must_contain_any": ["income", "salary", "earning"]}
+{"question": "How is my savings rate looking?", "must_contain_any": ["saving", "rate", "%"]}
+{"question": "What changed in my spending this month?", "must_contain_any": ["change", "increase", "decrease", "spike", "drop"]}

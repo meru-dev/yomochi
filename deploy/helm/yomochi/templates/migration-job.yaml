@@ -1,0 +1,55 @@
+{{- $secret := required "existingSecret is required: create the Kubernetes Secret (with key DATABASE_URL) BEFORE running `helm install`." .Values.existingSecret -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "yomochi.fullname" . }}-migrate
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        {{- include "yomochi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "yomochi.serviceAccountName" . }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: DATABASE_URL
+            - name: LOG_FORMAT
+              value: {{ .Values.env.LOG_FORMAT | quote }}
+            - name: OTEL_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp

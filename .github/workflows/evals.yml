@@ -1,0 +1,47 @@
+name: Evals (PR snapshot)
+
+on:
+  pull_request:
+    paths:
+      - 'app/outbound/adapters/openai/**'
+      - 'app/application/insights/**'
+      - 'app/application/search/**'
+      - 'app/application/transactions/use_cases/voice_*'
+      - 'tests/evals/**'
+      - 'scripts/bootstrap_evals.py'
+
+env:
+  UV_CACHE_DIR: /tmp/.uv-cache
+
+jobs:
+  evals-snapshot:
+    name: Evals (snapshot mode)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - name: Run evals in snapshot mode
+        id: run-evals
+        run: |
+          set -o pipefail
+          uv run pytest -m evals tests/evals/ -q --no-cov | tee evals-output.txt
+        continue-on-error: true  # warn, never block PR
+      - name: Post warning comment on threshold breach
+        if: steps.run-evals.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('evals-output.txt', 'utf8');
+            const tail = output.length > 3000 ? '…(truncated)\n' + output.slice(-3000) : output;
+            const body = "⚠️ Evals snapshot failures detected.\n\n```\n" + tail + "\n```";
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

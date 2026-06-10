@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "yomochi.fullname" . }}-kafka-topics
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "yomochi.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: kafka-topics
+          image: confluentinc/cp-kafka:7.7.0
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              TOPICS="{{ .Values.kafka.topics.transactions }} {{ .Values.kafka.topics.insights }} {{ .Values.kafka.topics.dlq }}"
+              for TOPIC in $TOPICS; do
+                kafka-topics --bootstrap-server {{ .Values.kafka.bootstrapServers }} \
+                  --create --if-not-exists \
+                  --topic "$TOPIC" \
+                  --partitions {{ .Values.kafka.partitions }} \
+                  --replication-factor {{ .Values.kafka.replicationFactor }}
+                echo "Topic ready: $TOPIC"
+              done
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

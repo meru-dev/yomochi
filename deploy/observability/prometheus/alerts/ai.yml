@@ -1,0 +1,55 @@
+groups:
+  - name: ai_operations
+    interval: 1m
+    rules:
+      - alert: OpenAICostHigh
+        expr: |
+          increase(openai_cost_usd_total[24h]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI spend exceeds $10 in the last 24 h"
+          description: >
+            Accumulated OpenAI cost over the last 24 hours is {{ $value | printf "%.2f" }} USD,
+            which exceeds the $10 daily budget threshold.
+
+      - alert: OpenAILatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(openai_call_duration_seconds_bucket[5m])) by (le, endpoint)
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI p95 latency exceeds 5 s"
+          description: >
+            The 95th-percentile latency for the {{ $labels.endpoint }} endpoint is
+            {{ $value | printf "%.1f" }} s, above the 5 s SLO threshold.
+
+      - alert: OpenAICircuitBreakerOpen
+        expr: openai_circuit_state == 2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenAI circuit breaker has been OPEN for > 5 min"
+          description: >
+            The OpenAI circuit breaker is OPEN (state=2). All AI features
+            (insights, embeddings, category suggestions) are degraded.
+            Investigate OpenAI API status and recent error logs.
+
+      - alert: SearchRecallDegraded
+        expr: |
+          yomochi_eval_search_recall_at_3 < 0.60
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Semantic search recall@3 below 0.60 threshold"
+          description: >
+            The nightly eval reports search recall@3 = {{ $value | printf "%.2f" }},
+            below the minimum acceptable threshold of 0.60. Embedding model or
+            index may need attention.

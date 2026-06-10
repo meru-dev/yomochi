@@ -1,0 +1,22 @@
+{
+  "key": "0748c313eb1e5dc1",
+  "prompt": "Suggest the most likely category for this transaction. Merchant: Costco. Type: EXPENSE. Valid codes: car, clothing, coffee, electronics, entertainment, fitness, food, freelance, groceries, health, insurance, investments, konbini, salary, shopping, streaming, taxi, transport, travel, utilities. Return JSON: {\"ranked\": [code1, code2, code3]}",
+  "model": "gpt-4o-mini",
+  "request_kwargs": {
+    "temperature": 0,
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  "response": {
+    "ranked": [
+      "groceries",
+      "food",
+      "shopping"
+    ]
+  },
+  "tokens_prompt": 87,
+  "tokens_completion": 15,
+  "cost_usd": 2.2049999999999997e-05,
+  "captured_at": "2026-06-08T17:06:51+00:00"
+}

@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+  --font-serif: "Lora", "Georgia", serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-income: var(--income);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+
+  /* shadcn tokens */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-border: var(--rule);
+  --color-ring: var(--accent);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--fab-fg);
+  --color-destructive: var(--danger);
+  --color-muted: var(--surface);
+  --color-muted-foreground: var(--text-3);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-accent-foreground: var(--text);
+  --color-input: var(--rule-strong);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+:root {
+  --bg:          #fafaf8;
+  --surface:     #ffffff;
+  --text:        #1a1a2e;
+  --text-2:      #4a4a6a;
+  --text-3:      #8b8ba7;
+  --accent: #5b6af0;
+  --income:      #3a9d72;
+  --rule:        #ebebf0;
+  --rule-strong: #d5d5e8;
+  --danger:      #d94f4f;
+  --warn:        #c97c2a;
+  --ok:          #3a9d72;
+  --fab-fg:      #ffffff;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-image: radial-gradient(var(--rule) 1px, transparent 0);
+  background-size: 24px 24px;
+}

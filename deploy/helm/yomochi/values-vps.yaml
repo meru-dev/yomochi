@@ -1,0 +1,100 @@
+# Single-node VPS profile (Hetzner CX32 / similar ~8 GB RAM).
+# Pair with deploy/k3s/bootstrap.sh which sets up:
+#   - k3s (traefik + servicelb disabled, local-path storage class)
+#   - ingress-nginx (DaemonSet on hostNetwork)
+#   - cert-manager + letsencrypt-prod ClusterIssuer
+#   - kube-prometheus-stack (PodMonitor will pick up yomochi workers)
+#   - sealed-secrets controller
+#   - cloudnative-pg operator (cnpg-system namespace)
+#   - yomochi-redis  (yomochi namespace, standalone, no auth)
+#   - yomochi-kafka  (yomochi namespace, KRaft combined, single node)
+
+image:
+  pullPolicy: IfNotPresent  # local-build flows on a single VPS; CI overrides for image.tag
+
+api:
+  replicaCount: 1
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits:   { cpu: 800m, memory: 512Mi }
+
+outboxWorker:      { replicaCount: 1 }
+transactionWorker: { replicaCount: 1 }
+insightWorker:     { replicaCount: 1 }
+portraitWorker:    { replicaCount: 1 }
+schedulerWorker:   { replicaCount: 1 }
+
+web:
+  replicaCount: 1
+
+hpa:
+  enabled: false  # single node — no horizontal scale headroom
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: yomochi.example.com  # override at install: --set ingress.hosts[0].host=…
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - yomochi.example.com
+      secretName: yomochi-tls
+
+postgresql:
+  enabled: true
+  instances: 1
+  image: "ghcr.io/cloudnative-pg/pgvector:17"
+  credentialsSecret: "yomochi-pg-user"
+  storage:
+    size: 8Gi
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+existingSecret: yomochi-secrets
+
+monitoring:
+  enabled: true
+  metricsPort: 9090
+  interval: 30s
+  scrapeTimeout: 10s
+  scrapeNamespace: monitoring
+  release: kube-prometheus-stack  # match the operator's release label selector
+
+networkPolicy:
+  # k3s ships an embedded kube-router netpol controller and enforces
+  # NetworkPolicy by default on Flannel — no extra CNI required. Disable only if
+  # the cluster was started with `--disable-network-policy`.
+  enabled: true
+  ingressNamespace: ingress-nginx
+  ports:
+    postgres: 5432
+    redis: 6379
+    kafka: 9092
+
+env:
+  LOG_FORMAT: json
+  OTEL_ENABLED: "true"
+  # Redis runs in-cluster (no auth) — not a secret.
+  REDIS_URL: "redis://yomochi-redis-master.yomochi.svc:6379/0"
+  # Kafka KRaft combined node installed by bootstrap.sh in yomochi namespace.
+  KAFKA_BOOTSTRAP_SERVERS: "yomochi-kafka.yomochi.svc:9092"
+  # Point at the in-cluster Tempo if you run an LGTM stack alongside, or at the
+  # kube-prometheus-stack OTLP collector. Empty → no traces exported.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""

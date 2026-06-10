@@ -1,0 +1,43 @@
+{{- if .Values.monitoring.enabled }}
+# PodMonitor — kube-prometheus-stack CRD. Scrapes the named `metrics` port on
+# every worker pod. Workers are headless (no Service) by design — a PodMonitor
+# is the idiomatic way for the Prometheus Operator to discover them.
+#
+# Selector matches all worker components by label. Adding a new worker only
+# requires labeling the pod `app.kubernetes.io/component: <name>-worker` and
+# extending the In list below.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "yomochi.fullname" . }}-workers
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.release }}
+    release: {{ . | quote }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "yomochi.selectorLabels" . | nindent 6 }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - outbox-worker
+          - insight-worker
+          - portrait-worker
+          - scheduler-worker
+          - transaction-worker
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.monitoring.interval }}
+      scrapeTimeout: {{ .Values.monitoring.scrapeTimeout }}
+      relabelings:
+        # Surface the component label as `worker` for cleaner Grafana variables.
+        - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+          targetLabel: worker
+{{- end }}

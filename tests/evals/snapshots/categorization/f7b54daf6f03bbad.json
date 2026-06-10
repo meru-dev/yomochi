@@ -1,0 +1,22 @@
+{
+  "key": "f7b54daf6f03bbad",
+  "prompt": "Suggest the most likely category for this transaction. Merchant: GitHub Sponsors. Type: INCOME. Valid codes: car, clothing, coffee, electronics, entertainment, fitness, food, freelance, groceries, health, insurance, investments, konbini, salary, shopping, streaming, taxi, transport, travel, utilities. Return JSON: {\"ranked\": [code1, code2, code3]}",
+  "model": "gpt-4o-mini",
+  "request_kwargs": {
+    "temperature": 0,
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  "response": {
+    "ranked": [
+      "freelance",
+      "entertainment",
+      "investments"
+    ]
+  },
+  "tokens_prompt": 89,
+  "tokens_completion": 19,
+  "cost_usd": 2.475e-05,
+  "captured_at": "2026-06-08T17:07:13+00:00"
+}

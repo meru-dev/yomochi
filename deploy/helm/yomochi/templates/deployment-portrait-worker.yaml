@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "yomochi.fullname" . }}-portrait-worker
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portrait-worker
+spec:
+  replicas: {{ .Values.portraitWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "yomochi.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: portrait-worker
+  template:
+    metadata:
+      labels:
+        {{- include "yomochi.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: portrait-worker
+    spec:
+      serviceAccountName: {{ include "yomochi.serviceAccountName" . }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        - name: portrait-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.main.portrait.main
+          envFrom:
+            - configMapRef:
+                name: {{ include "yomochi.fullname" . }}
+            {{- if .Values.existingSecret }}
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+            {{- end }}
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import app"]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.portraitWorker.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp

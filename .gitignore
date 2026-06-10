@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+*.pyd
+
+# uv / pip
+.venv/
+.uv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.coveragerc
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar
+
+# Helm
+*.tgz
+charts/
+
+# Sealed-Secrets — never commit plain values
+deploy/sealed-secrets/secret.yaml
+sealed-secrets-master.key
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+
+# Evals bootstrap drafts (reviewed before promotion)
+tests/evals/golden/.draft/
+.worktrees/
+
+# Local AI / agent state — never push
+.claude/
+.agents
+.superpowers/
+.playwright-mcp/
+_docs/
+
+# Frontend build artifacts
+web/.next/
+web/storybook-static/
+web/test-results/
+web/playwright-report/
+
+# Hypothesis / import-linter caches
+.hypothesis/
+.import_linter_cache/
+.ruff_cache/
+
+# mutmut workspace
+mutants/
+.mutmut-cache
+mutants.sqlite
+
+# Coverage
+.coverage.*
+
+# Build state
+debug-storybook.log

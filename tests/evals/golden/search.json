@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "persona": "meiko_tokyo",
+  "cases": [
+    {
+      "case_id": "search_001",
+      "query": "how much on coffee in April",
+      "expected_transaction_ids": ["meiko_tx_042", "meiko_tx_055", "meiko_tx_071"]
+    },
+    {
+      "case_id": "search_002",
+      "query": "konbini spending last month",
+      "expected_transaction_ids": ["meiko_tx_010", "meiko_tx_011", "meiko_tx_012", "meiko_tx_013"]
+    },
+    {
+      "case_id": "search_003",
+      "query": "Suica top-ups",
+      "expected_transaction_ids": ["meiko_tx_088", "meiko_tx_095"]
+    },
+    {
+      "case_id": "search_004",
+      "query": "transactions above 5000 yen",
+      "expected_transaction_ids": ["meiko_tx_104", "meiko_tx_122"]
+    },
+    {
+      "case_id": "search_005",
+      "query": "salary deposits",
+      "expected_transaction_ids": ["meiko_tx_001", "meiko_tx_030", "meiko_tx_060"]
+    },
+    {
+      "case_id": "search_006",
+      "query": "USD payments",
+      "expected_transaction_ids": ["meiko_tx_077", "meiko_tx_078"]
+    },
+    {
+      "case_id": "search_007",
+      "query": "rent payment",
+      "expected_transaction_ids": ["meiko_tx_003"]
+    },
+    {
+      "case_id": "search_008",
+      "query": "gym or fitness",
+      "expected_transaction_ids": ["meiko_tx_018"]
+    },
+    {
+      "case_id": "search_009",
+      "query": "electricity bill",
+      "expected_transaction_ids": ["meiko_tx_025"]
+    },
+    {
+      "case_id": "search_010",
+      "query": "Uniqlo purchases",
+      "expected_transaction_ids": ["meiko_tx_034", "meiko_tx_067"]
+    },
+    {
+      "case_id": "search_011",
+      "query": "doctor or hospital visit",
+      "expected_transaction_ids": ["meiko_tx_040"]
+    },
+    {
+      "case_id": "search_012",
+      "query": "taxi rides",
+      "expected_transaction_ids": ["meiko_tx_045", "meiko_tx_052"]
+    },
+    {
+      "case_id": "search_013",
+      "query": "insurance payment",
+      "expected_transaction_ids": ["meiko_tx_058"]
+    },
+    {
+      "case_id": "search_014",
+      "query": "Spotify subscription",
+      "expected_transaction_ids": ["meiko_tx_064"]
+    },
+    {
+      "case_id": "search_015",
+      "query": "Yoshinoya meals",
+      "expected_transaction_ids": ["meiko_tx_070", "meiko_tx_083"]
+    },
+    {
+      "case_id": "search_016",
+      "query": "Amazon orders",
+      "expected_transaction_ids": ["meiko_tx_086", "meiko_tx_099"]
+    },
+    {
+      "case_id": "search_017",
+      "query": "car fuel or gas station",
+      "expected_transaction_ids": ["meiko_tx_106"]
+    },
+    {
+      "case_id": "search_018",
+      "query": "cinema or movie tickets",
+      "expected_transaction_ids": ["meiko_tx_110", "meiko_tx_115"]
+    },
+    {
+      "case_id": "search_019",
+      "query": "gas or city gas bill",
+      "expected_transaction_ids": ["meiko_tx_118"]
+    },
+    {
+      "case_id": "search_020",
+      "query": "cash withdrawal ATM",
+      "expected_transaction_ids": ["meiko_tx_100"]
+    }
+  ]
+}

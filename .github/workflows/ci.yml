@@ -1,0 +1,347 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-progress runs on new push, but never cancel a deploy mid-flight on main.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Default: read-only. Jobs that need write access declare it explicitly.
+permissions:
+  contents: read
+
+env:
+  UV_CACHE_DIR: /tmp/.uv-cache
+  REGISTRY: ghcr.io
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - run: uv run ruff check app/ tests/
+      - run: uv run ruff format --check app/ tests/
+      - run: uv run deptry .
+      - run: uv run slotscheck -m app
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - run: uv run mypy app/ tests/
+
+  schema-drift:
+    name: Schema drift (OpenAPI → TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      - run: uv sync --all-groups --frozen
+      - name: Export OpenAPI schema
+        run: |
+          uv run python - <<'EOF' > /tmp/openapi.json
+          import json, os
+          from app.main.config.settings import (
+              AppSettings, AuthSettings, DatabaseSettings,
+              ObservabilitySettings, RedisSettings,
+          )
+          from app.main.api.app_factory import make_app
+          app = make_app(
+              app_settings=AppSettings(debug=False),
+              database_settings=DatabaseSettings(database_url="postgresql+asyncpg://x:y@localhost/z"),
+              redis_settings=RedisSettings(redis_url="redis://localhost:6379/0"),
+              auth_settings=AuthSettings(jwt_secret=os.environ["JWT_SECRET"]),
+              observability_settings=ObservabilitySettings(log_format="console", otel_enabled=False),
+          )
+          print(json.dumps(app.openapi()))
+          EOF
+        env:
+          JWT_SECRET: "ci-test-secret-must-be-at-least-32bytes!!"
+      - name: Regenerate schema.d.ts
+        run: |
+          cd web
+          npm ci --ignore-scripts
+          npx openapi-typescript /tmp/openapi.json --output /tmp/schema_generated.d.ts
+      - name: Check for drift
+        run: |
+          diff web/src/lib/api/schema.d.ts /tmp/schema_generated.d.ts || {
+            echo "::error::schema.d.ts is stale — run 'npm run generate:api' in web/ and commit"
+            exit 1
+          }
+
+  boundaries:
+    name: Import boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - run: uv run lint-imports
+
+  test-unit:
+    name: Tests (unit)
+    runs-on: ubuntu-latest
+    # No services — pure unit tests use fakes; outbox/scheduler spin their own
+    # testcontainers (Docker is available on ubuntu-latest runners).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - name: Run unit tests with coverage
+        run: uv run pytest tests/unit/ -q --cov=app/domain --cov=app/application --cov-report=term-missing --cov-fail-under=70
+        env:
+          OTEL_ENABLED: "false"
+          JWT_SECRET: "ci-test-secret-must-be-at-least-32bytes!!"
+
+  test-integration:
+    name: Tests (integration + migrations + smoke)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: yomochi
+          POSTGRES_PASSWORD: yomochi
+          POSTGRES_DB: yomochi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --all-groups --frozen
+      - name: Run integration + migration + smoke tests
+        # --external-infra: use the GitHub Actions services above instead of testcontainers
+        run: uv run pytest tests/integration/ tests/migrations/ tests/smoke/ -q --no-cov --external-infra
+        env:
+          OTEL_ENABLED: "false"
+          JWT_SECRET: "ci-test-secret-must-be-at-least-32bytes!!"
+          DATABASE_URL: "postgresql+asyncpg://yomochi:yomochi@localhost:5432/yomochi"
+          REDIS_URL: "redis://localhost:6379/0"
+
+  build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, boundaries, schema-drift, test-unit, test-integration]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm-lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.15.0"
+      - run: |
+          helm lint deploy/helm/yomochi/
+          helm lint deploy/helm/yomochi/ -f deploy/helm/yomochi/values-vps.yaml
+          helm lint deploy/helm/yomochi/ -f deploy/helm/yomochi/values-prod.yaml
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build, helm-lint]
+    # Disabled until VPS bootstrap done + KUBECONFIG/CLUSTER_DOMAIN secrets set.
+    # Re-enable: change condition to `github.ref == 'refs/heads/main' && github.event_name == 'push'`.
+    if: false
+    # GitHub Environment — enables deployment history, protection rules, and secrets scoping.
+    environment:
+      name: production
+      url: https://${{ vars.CLUSTER_DOMAIN }}
+    permissions:
+      contents: read
+      packages: write        # push to ghcr.io
+      attestations: write    # artifact provenance
+      id-token: write        # OIDC for attestations
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push API image
+        id: push-api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest API image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi
+          subject-digest: ${{ steps.push-api.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build & push web image
+        id: push-web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi-web:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi-web:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest web image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi-web
+          subject-digest: ${{ steps.push-web.outputs.digest }}
+          push-to-registry: true
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.15.0"
+
+      - name: Deploy to cluster
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          helm upgrade --install yomochi deploy/helm/yomochi \
+            --kubeconfig "$RUNNER_TEMP/kubeconfig" \
+            --namespace yomochi --create-namespace \
+            --set image.tag=sha-${{ github.sha }} \
+            --set image.pullPolicy=Always \
+            --set image.repository=${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi \
+            --set web.image.tag=sha-${{ github.sha }} \
+            --set web.image.pullPolicy=Always \
+            --set web.image.repository=${{ env.REGISTRY }}/${{ github.repository_owner }}/yomochi-web \
+            -f deploy/helm/yomochi/values-vps.yaml \
+            --set ingress.hosts[0].host=${{ secrets.CLUSTER_DOMAIN }} \
+            --set ingress.tls[0].hosts[0]=${{ secrets.CLUSTER_DOMAIN }} \
+            --atomic --wait --timeout 5m
+
+  mutation:
+    name: Mutation score (domain + use-cases)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            domain:
+              - 'app/domain/services/**'
+              - 'app/application/**/use_cases/**'
+      - uses: astral-sh/setup-uv@v5
+        if: steps.changes.outputs.domain == 'true' || github.event_name == 'workflow_dispatch'
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Run mutmut
+        if: steps.changes.outputs.domain == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          uv run mutmut run; MUTMUT_EXIT=$?
+          # Exit 1 = surviving mutants (expected — threshold checked below). Anything else = crash.
+          if [ "$MUTMUT_EXIT" -gt 1 ]; then
+            echo "::error::mutmut crashed with exit code $MUTMUT_EXIT"
+            exit "$MUTMUT_EXIT"
+          fi
+          RESULTS=$(uv run mutmut results --all True 2>&1)
+          echo "$RESULTS"
+          KILLED=$(echo "$RESULTS" | grep -c ": killed" || true)
+          SURVIVED=$(echo "$RESULTS" | grep -c ": survived\|: suspicious" || true)
+          TOTAL=$((KILLED + SURVIVED))
+          if [ "$TOTAL" -gt "0" ]; then
+            SCORE=$((KILLED * 100 / TOTAL))
+            echo "Mutation score: ${SCORE}% (${KILLED}/${TOTAL} killed)"
+            if [ "$SCORE" -lt "50" ]; then
+              echo "::error::Mutation score ${SCORE}% is below 50% threshold"
+              exit 1
+            fi
+          fi
+        env:
+          OTEL_ENABLED: "false"
+          JWT_SECRET: "ci-test-secret-must-be-at-least-32bytes!!"

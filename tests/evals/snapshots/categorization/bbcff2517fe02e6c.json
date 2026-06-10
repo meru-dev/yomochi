@@ -1,0 +1,22 @@
+{
+  "key": "bbcff2517fe02e6c",
+  "prompt": "Suggest the most likely category for this transaction. Merchant: Tsuruha Drug. Type: EXPENSE. Valid codes: car, clothing, coffee, electronics, entertainment, fitness, food, freelance, groceries, health, insurance, investments, konbini, salary, shopping, streaming, taxi, transport, travel, utilities. Return JSON: {\"ranked\": [code1, code2, code3]}",
+  "model": "gpt-4o-mini",
+  "request_kwargs": {
+    "temperature": 0,
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  "response": {
+    "ranked": [
+      "health",
+      "groceries",
+      "shopping"
+    ]
+  },
+  "tokens_prompt": 90,
+  "tokens_completion": 15,
+  "cost_usd": 2.25e-05,
+  "captured_at": "2026-06-08T17:07:03+00:00"
+}

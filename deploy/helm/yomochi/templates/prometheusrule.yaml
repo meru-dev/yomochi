@@ -1,0 +1,88 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "yomochi.fullname" . }}-alerts
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.release }}
+    release: {{ . | quote }}
+    {{- end }}
+spec:
+  groups:
+    - name: api_availability
+      interval: 1m
+      rules:
+        - alert: ApiDown
+          expr: |
+            absent(up{job="yomochi-api"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Yomochi API unreachable for > 5 min"
+            description: >
+              No yomochi-api scrape target has been reachable for 5 minutes.
+              Check pod status, readiness probe, and network policies.
+              Note: single-replica rolling deploy has ~30s gap; the 5-min window
+              ensures this does not fire on normal deploys.
+
+        - alert: ApiHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="yomochi-api", status_class="5xx"}[5m]))
+            /
+            sum(rate(http_requests_total{job="yomochi-api"}[5m]))
+            > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API 5xx rate > 5% for 5 min"
+            description: >
+              {{ "{{ $value | humanizePercentage }}" }} of yomochi-api requests are returning
+              5xx errors over the last 5 minutes. Investigate recent deployments,
+              downstream dependency failures, or OOM events.
+
+    - name: ai_operations
+      interval: 1m
+      rules:
+        - alert: OpenAICostHigh
+          expr: |
+            increase(openai_cost_usd_total[24h]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "OpenAI spend exceeds $10 in the last 24 h"
+            description: >
+              Accumulated OpenAI cost over the last 24 hours is
+              {{ "{{ $value | printf \"%.2f\" }}" }} USD,
+              which exceeds the $10 daily budget threshold.
+
+        - alert: OpenAILatencyHigh
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(openai_call_duration_seconds_bucket[5m])) by (le, endpoint)
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "OpenAI p95 latency exceeds 5 s"
+            description: >
+              The 95th-percentile latency for the {{ "{{ $labels.endpoint }}" }} endpoint is
+              {{ "{{ $value | printf \"%.1f\" }}" }} s, above the 5 s SLO threshold.
+
+        - alert: OpenAICircuitBreakerOpen
+          expr: openai_circuit_state == 2
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "OpenAI circuit breaker has been OPEN for > 5 min"
+            description: >
+              The OpenAI circuit breaker is OPEN (state=2). All AI features
+              (insights, embeddings, category suggestions) are degraded.
+              Investigate OpenAI API status and recent error logs.
+{{- end }}

@@ -1,0 +1,147 @@
+image:
+  repository: yomochi
+  # `dev` is the default for local k3d/kind. CI overrides via `--set image.tag=$GIT_SHA`.
+  tag: dev
+  pullPolicy: IfNotPresent
+
+# Replica counts per process
+api:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+outboxWorker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+transactionWorker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 200m
+      memory: 192Mi
+
+insightWorker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+portraitWorker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+schedulerWorker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+web:
+  replicaCount: 1
+  image:
+    repository: yomochi-web
+    tag: dev
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: yomochi.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+# External service endpoints (secrets managed externally)
+env:
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  KAFKA_BOOTSTRAP_SERVERS: ""
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  LOG_FORMAT: json
+  OTEL_ENABLED: "true"
+
+# Secrets come from an external secrets manager (Vault, AWS SSM, etc.)
+# Reference them via secretKeyRef in a separate secret.yaml per environment.
+existingSecret: ""
+
+networkPolicy:
+  # Enable per-workload deny-ingress + explicit egress (DNS, datastores, HTTPS).
+  # Requires a CNI that supports NetworkPolicy (Calico, Cilium, etc.). Off by default
+  # so chart still installs on plain `k3d`/`kind` without a NP-capable CNI.
+  enabled: false
+  # Namespace label of the ingress controller (matchLabels: kubernetes.io/metadata.name).
+  ingressNamespace: ingress-nginx
+  ports:
+    postgres: 5432
+    redis: 6379
+    kafka: 9092
+
+monitoring:
+  enabled: false
+  release: ""
+
+postgresql:
+  enabled: false
+
+kafka:
+  bootstrapServers: "kafka:9092"
+  topics:
+    transactions: "yomochi.transactions.v1"
+    insights: "yomochi.insights.v1"
+    dlq: "yomochi.dlq.v1"
+  partitions: 3
+  replicationFactor: 1

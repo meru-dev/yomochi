@@ -1,0 +1,228 @@
+[project]
+name = "yomochi"
+version = "0.1.0"
+description = "AI-powered expense understanding"
+requires-python = ">=3.13"
+dependencies = [
+    # HTTP
+    "fastapi>=0.128.0,<0.129.0",
+    "starlette",
+    "uvicorn[standard]>=0.34.0,<0.35.0",
+    # Pydantic
+    "pydantic>=2.10.0,<3.0.0",
+    "pydantic-settings>=2.12.0,<3.0.0",
+    # DI
+    "dishka>=1.7.0,<2.0.0",
+    "dishka-faststream>=0.6.0,<1.0.0",
+    # Error handling
+    "fastapi-error-map>=0.9.0,<1.0.0",
+    # IDs — ADR-0012
+    "uuid-utils>=0.15.0,<1.0.0",
+    # Persistence
+    "sqlalchemy[asyncio]>=2.0.0,<3.0.0",
+    "asyncpg>=0.30.0,<1.0.0",
+    "alembic>=1.14.0,<2.0.0",
+    "pgvector>=0.3.0,<1.0.0",
+    # Cache / Messaging
+    "redis[hiredis]>=5.2.0,<6.0.0",
+    "faststream[kafka,redis]>=0.6.0,<1.0.0",
+    # Auth — ADR-0008
+    "pyjwt>=2.10.0,<3.0.0",
+    "bcrypt>=4.2.0,<5.0.0",
+    # AI — ADR-0005, ADR-0015
+    "openai>=1.60.0,<2.0.0",
+    "aiolimiter>=1.2.1,<2.0.0",
+    "purgatory>=3.0.0,<4.0.0",
+    # Observability
+    "structlog>=25.5.0,<26.0.0",
+    "opentelemetry-api>=1.27.0,<2.0.0",
+    "opentelemetry-sdk>=1.27.0,<2.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
+    "opentelemetry-instrumentation-redis>=0.48b0",
+    "opentelemetry-exporter-otlp>=1.27.0,<2.0.0",
+    "prometheus-client>=0.21.0,<1.0.0",
+    # Serialization
+    "orjson>=3.10.0,<4.0.0",
+    "apscheduler>=3.10",
+    # File uploads (multipart/form-data) — used via FastAPI UploadFile, not imported directly
+    "python-multipart>=0.0.18,<1.0.0",
+    # HTTP client — used in openai gateway client factory
+    "httpx>=0.27.0,<1.0.0",
+    # Image processing — V2 ingestion (ADR-0006, ADR-0013)
+    "Pillow>=11.0.0,<12.0.0",
+    "pillow-heif>=0.20.0,<1.0.0",
+    "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+    "mypy>=1.13.0",
+    "import-linter>=2.0.0",
+    "deptry>=0.21.0",
+    "slotscheck>=0.19.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "asgi-lifespan>=2.1.0",
+    "testcontainers[postgres,redis,kafka]>=4.8.0",
+    "freezegun>=1.5.0",
+    "pytest-randomly>=3.15.0",
+    "hypothesis>=6.112.0",
+    "polyfactory>=2.18.0",
+    "pre-commit>=4.0.0",
+    "mutmut>=2.4.0",
+    # Type stubs
+    "types-redis>=4.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = ["app/outbound/persistence_sqla/alembic/versions", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "DTZ",
+    "PIE",
+    "PT",
+    "RET",
+    "SIM",
+    "TCH",
+    "RUF",
+    "ANN",
+    "S",
+    "A",
+]
+ignore = [
+    "ANN401",
+    "S101",
+    "E501",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "TC001",
+    "TC002",
+    "TC003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "ANN", "PT011", "E402"]
+"app/outbound/persistence_sqla/mappings/*.py" = ["UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+strict = true
+exclude = ["app/outbound/persistence_sqla/alembic/"]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg.*", "faststream.*", "uuid_utils.*", "pgvector.*", "slotscheck.*", "purgatory.*", "aiolimiter.*", "apscheduler.*", "pillow_heif.*", "testcontainers.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+check_untyped_defs = false
+warn_return_any = false
+disable_error_code = ["type-arg", "no-untyped-def", "call-arg", "arg-type", "var-annotated", "assignment", "attr-defined", "no-untyped-call", "no-redef", "misc", "operator", "return-value", "unused-ignore"]
+warn_unused_ignores = false
+
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
+markers = [
+    "evals: opt-in AI quality evaluations (skipped by default; run with `pytest -m evals`)",
+]
+addopts = "--cov=app --cov-report=term-missing -q -m 'not evals'"
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/outbound/persistence_sqla/alembic/*", "app/workers/*"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = false
+omit = [
+    "app/outbound/persistence_sqla/alembic/*",
+    "app/main/asgi.py",
+    "app/inbound/http/controllers/reports/*",
+]
+
+# ---------------------------------------------------------------------------
+# Deptry — packages used in later milestones are pre-declared intentionally
+# ---------------------------------------------------------------------------
+[tool.deptry]
+per_rule_ignores = { DEP002 = [
+    # Used as CLI commands, not imported directly
+    "uvicorn",
+    # Used via fastapi / pydantic-settings, wired in M1+ use cases
+    "pydantic",
+    "dishka",
+    # Used via fastapi.responses.ORJSONResponse (fastapi re-exports)
+    "orjson",
+    # Wired in M1+ adapters
+    "openai",
+    "aiolimiter",
+    "purgatory",
+    "bcrypt",
+    "pyjwt",
+    "faststream",
+    "redis",
+    "pgvector",
+    "fastapi-error-map",
+    "dishka-faststream",
+    "uuid-utils",
+    "asyncpg",
+    # Used via FastAPI UploadFile — no direct import
+    "python-multipart",
+] }
+
+[tool.slotscheck]
+# context.config only valid inside alembic runtime — not importable standalone
+# asgi.py calls make_app() at module level which reads env vars — not importable without them
+exclude-modules = "app\\.outbound\\.persistence_sqla\\.alembic\\.env|app\\.main\\.api\\.asgi"
+
+[tool.mutmut]
+paths_to_mutate = [
+    "app/domain/services",
+    "app/application",
+]
+tests_dir = ["tests/unit/"]
+also_copy = ["app"]
+pytest_add_cli_args = ["--no-cov", "-p", "no:cacheprovider", "-p", "no:randomly"]

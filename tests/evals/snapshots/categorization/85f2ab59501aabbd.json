@@ -1,0 +1,22 @@
+{
+  "key": "85f2ab59501aabbd",
+  "prompt": "Suggest the most likely category for this transaction. Merchant: McDonald's. Type: EXPENSE. Valid codes: car, clothing, coffee, electronics, entertainment, fitness, food, freelance, groceries, health, insurance, investments, konbini, salary, shopping, streaming, taxi, transport, travel, utilities. Return JSON: {\"ranked\": [code1, code2, code3]}",
+  "model": "gpt-4o-mini",
+  "request_kwargs": {
+    "temperature": 0,
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  "response": {
+    "ranked": [
+      "food",
+      "entertainment",
+      "groceries"
+    ]
+  },
+  "tokens_prompt": 88,
+  "tokens_completion": 17,
+  "cost_usd": 2.34e-05,
+  "captured_at": "2026-06-08T17:06:33+00:00"
+}

@@ -1,0 +1,330 @@
+# YAML anchors — shared bits for app services / workers
+x-app: &app
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  networks: [data_net]
+
+x-worker: &worker
+  <<: *app
+  healthcheck:
+    disable: true
+
+x-worker-resources: &worker-resources
+  deploy:
+    resources:
+      limits:
+        cpus: '0.25'
+        memory: 256M
+
+services:
+  # ---------------------------------------------------------------------------
+  # Data stores
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [data_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --save 60 1
+    ports: ["6379:6379"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: [data_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Two listeners: INTERNAL for container-to-container, EXTERNAL for host tools
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      start_period: 15s
+      retries: 10
+    networks: [data_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+
+  # ---------------------------------------------------------------------------
+  # LGTM observability stack
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    restart: unless-stopped
+    ports: ["9090:9090"]
+    volumes:
+      - ./deploy/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks: [obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  loki:
+    image: grafana/loki:3.7.2
+    restart: unless-stopped
+    ports: ["3110:3100"]
+    volumes:
+      - ./deploy/observability/loki.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yml
+    networks: [obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Log shipper. Tails every Docker container's stdout/stderr, parses the
+  # structlog JSON, attaches `service` + `trace_id` so Grafana derivedFields
+  # can jump from a log line to its Tempo trace. Without this, Loki has no
+  # source and the LGTM stack is read-only.
+  promtail:
+    image: grafana/promtail:3.6.11
+    restart: unless-stopped
+    volumes:
+      - ./deploy/observability/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - promtail_data:/tmp/promtail
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki: {condition: service_started}
+    networks: [obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 192M
+
+  tempo:
+    image: grafana/tempo:2.10.5
+    restart: unless-stopped
+    ports:
+      - "3200:3200"
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      - ./deploy/observability/tempo.yml:/etc/tempo/config.yml:ro
+      - tempo_data:/var/tempo
+    command: -config.file=/etc/tempo/config.yml
+    networks: [obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:13.0.2
+    restart: unless-stopped
+    ports: ["3030:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus: {condition: service_healthy}
+      loki: {condition: service_started}
+      tempo: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    networks: [obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Application
+  # ---------------------------------------------------------------------------
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    profiles: [migrate]
+    depends_on:
+      postgres: {condition: service_healthy}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  api:
+    <<: *app
+    ports:
+      - "${API_HOST_PORT:-8000}:8000"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    networks: [data_net, obs_net, web_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  outbox-worker:
+    <<: [*worker, *worker-resources]
+    command: ["python", "-m", "app.main.outbox.main"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    networks: [data_net, obs_net]
+
+  transaction-worker:
+    <<: *worker
+    command: ["python", "-m", "app.main.transaction.main"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    networks: [data_net, obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 192M
+
+  insight-worker:
+    <<: *worker
+    command: ["python", "-m", "app.main.insight.main"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    networks: [data_net, obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+
+  portrait-worker:
+    <<: *worker
+    command: ["python", "-m", "app.main.portrait.main"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [data_net, obs_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  scheduler-worker:
+    <<: [*worker, *worker-resources]
+    command: ["python", "-m", "app.main.scheduler.main"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [data_net, obs_net]
+
+  yomochi-web:
+    build: ./web
+    restart: unless-stopped
+    ports: ["3100:3000"]
+    environment:
+      - HOSTNAME=0.0.0.0
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks: [web_net]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+  loki_data:
+  tempo_data:
+  prometheus_data:
+  promtail_data:
+
+networks:
+  data_net: {driver: bridge}
+  obs_net: {driver: bridge}
+  web_net: {driver: bridge}

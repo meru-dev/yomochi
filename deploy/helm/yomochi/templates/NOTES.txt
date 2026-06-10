@@ -1,0 +1,58 @@
+yomochi {{ .Chart.AppVersion }} installed into {{ .Release.Namespace }}.
+
+────────────────────────────────────────────────────────────────────────────
+NEXT STEPS
+────────────────────────────────────────────────────────────────────────────
+
+1. Verify the migration ran (pre-install / pre-upgrade hook):
+
+     kubectl -n {{ .Release.Namespace }} get jobs -l app.kubernetes.io/component=migrate
+     kubectl -n {{ .Release.Namespace }} logs job/{{ include "yomochi.fullname" . }}-migrate
+
+   The hook fails the release loudly if `existingSecret` (= "{{ .Values.existingSecret }}")
+   is missing or DATABASE_URL cannot reach the database. See
+   deploy/sealed-secrets/README.md for the seal-first procedure.
+
+2. Verify the api is reachable:
+
+   {{- if .Values.ingress.enabled }}
+   {{- range .Values.ingress.hosts }}
+     https://{{ .host }}/health
+   {{- end }}
+   {{- else }}
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "yomochi.fullname" . }} 8000:{{ .Values.service.port }}
+     curl http://localhost:8000/health
+   {{- end }}
+
+3. Verify the workers are running:
+
+     kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/name={{ include "yomochi.name" . }}
+
+{{- if .Values.monitoring.enabled }}
+
+4. Verify Prometheus scrape (PodMonitor):
+
+     kubectl -n {{ .Release.Namespace }} get podmonitor
+     # Then in your Prometheus UI, target should appear as job="…/{{ include "yomochi.fullname" . }}-workers".
+     # If networkPolicy.enabled=true: the worker ingress NP allows port {{ .Values.monitoring.metricsPort }}
+     # from namespace "{{ .Values.monitoring.scrapeNamespace }}".
+{{- end }}
+
+────────────────────────────────────────────────────────────────────────────
+INSTALL ORDERING — important
+────────────────────────────────────────────────────────────────────────────
+
+The chart expects the following to exist BEFORE `helm install`:
+
+  - Secret "{{ .Values.existingSecret }}" with keys: DATABASE_URL, REDIS_URL,
+    KAFKA_BOOTSTRAP_SERVERS, OPENAI_API_KEY, JWT_SECRET.
+  - Postgres reachable from the cluster (DATABASE_URL).
+
+Order Helm follows on install / upgrade:
+
+  pre-install hook  →  migration Job  (must succeed)
+                    ↓
+  rendered resources →  api + 5 workers + web + ingress + PodMonitor
+
+Use `--atomic --wait` on `helm upgrade --install` so a failed hook rolls the
+release back to the previous revision instead of leaving you with a half-deploy.

@@ -1,0 +1,33 @@
+groups:
+  - name: api_availability
+    interval: 1m
+    rules:
+      - alert: ApiDown
+        expr: |
+          absent(up{job="yomochi-api"} == 1)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Yomochi API unreachable for > 5 min"
+          description: >
+            No yomochi-api scrape target has been reachable for 5 minutes.
+            Check pod status, readiness probe, and network policies.
+            Note: single-replica rolling deploy has ~30s gap; the 5-min window
+            ensures this does not fire on normal deploys.
+
+      - alert: ApiHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="yomochi-api", status_class="5xx"}[5m]))
+          /
+          sum(rate(http_requests_total{job="yomochi-api"}[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 5xx rate > 5% for 5 min"
+          description: >
+            {{ $value | humanizePercentage }} of yomochi-api requests are returning
+            5xx errors over the last 5 minutes. Investigate recent deployments,
+            downstream dependency failures, or OOM events.

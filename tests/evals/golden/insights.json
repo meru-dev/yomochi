@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "case_id": "insights_001_normal_month",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["food", "konbini", "transport", "salary"],
+      "input_merchants": ["Lawson", "FamilyMart", "JR East", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["food", "konbini"],
+        "must_mention_merchants": ["Lawson"],
+        "impact_score_range": [3, 8]
+      },
+      "transactions_fixture": "meiko_tokyo_april_2026"
+    },
+    {
+      "case_id": "insights_002_multi_currency",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["food", "travel", "salary"],
+      "input_merchants": ["Lawson", "Hilton Tokyo", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["travel"],
+        "must_mention_merchants": ["Hilton Tokyo"],
+        "impact_score_range": [5, 10],
+        "must_not_sum_across_currencies": true
+      },
+      "transactions_fixture": "alex_traveler_march_2026"
+    },
+    {
+      "case_id": "insights_003_first_week_partial",
+      "period": "WEEKLY",
+      "context_quality": "PARTIAL",
+      "input_categories": ["food", "transport"],
+      "input_merchants": ["Lawson", "JR East"],
+      "expected_rubric": {
+        "impact_score_range": [1, 6],
+        "must_acknowledge_partial_context": true
+      },
+      "transactions_fixture": "meiko_tokyo_first_week"
+    },
+    {
+      "case_id": "insights_004_high_impact_shift",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["entertainment", "food"],
+      "input_merchants": ["Various"],
+      "expected_rubric": {
+        "must_mention_categories": ["entertainment"],
+        "impact_score_range": [7, 10]
+      },
+      "transactions_fixture": "meiko_tokyo_entertainment_spike"
+    },
+    {
+      "case_id": "insights_005_subscription_heavy",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["streaming", "entertainment", "salary"],
+      "input_merchants": ["Netflix", "Spotify", "Adobe", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["streaming"],
+        "must_mention_merchants": ["Netflix", "Spotify"],
+        "impact_score_range": [4, 8]
+      },
+      "transactions_fixture": "meiko_tokyo_subscriptions_may_2026"
+    },
+    {
+      "case_id": "insights_006_no_income_detected",
+      "period": "MONTHLY",
+      "context_quality": "PARTIAL",
+      "input_categories": ["food", "transport", "shopping"],
+      "input_merchants": ["Lawson", "JR East", "Amazon"],
+      "expected_rubric": {
+        "impact_score_range": [2, 7],
+        "must_acknowledge_partial_context": true
+      },
+      "transactions_fixture": "meiko_tokyo_expenses_only_june_2026"
+    },
+    {
+      "case_id": "insights_007_large_single_purchase",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["travel", "food", "salary"],
+      "input_merchants": ["ANA Airlines", "Lawson", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["travel"],
+        "must_mention_merchants": ["ANA Airlines"],
+        "impact_score_range": [6, 10]
+      },
+      "transactions_fixture": "meiko_tokyo_travel_purchase_2026"
+    },
+    {
+      "case_id": "insights_008_savings_month",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["groceries", "transport", "salary"],
+      "input_merchants": ["Seiyu", "Tokyo Metro", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["salary"],
+        "impact_score_range": [1, 5]
+      },
+      "transactions_fixture": "meiko_tokyo_low_spend_march_2026"
+    },
+    {
+      "case_id": "insights_009_recurring_dominant",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["utilities", "streaming", "salary"],
+      "input_merchants": ["Tokyo Gas", "NTT Docomo", "Netflix", "Acme Corp"],
+      "expected_rubric": {
+        "must_mention_categories": ["utilities"],
+        "impact_score_range": [2, 6]
+      },
+      "transactions_fixture": "meiko_tokyo_recurring_february_2026"
+    },
+    {
+      "case_id": "insights_010_mixed_jpy_usd",
+      "period": "MONTHLY",
+      "context_quality": "FULL",
+      "input_categories": ["food", "shopping", "salary"],
+      "input_merchants": ["Lawson", "Amazon.com", "Acme Corp", "PayPal"],
+      "expected_rubric": {
+        "must_mention_categories": ["shopping"],
+        "impact_score_range": [3, 7],
+        "must_not_sum_across_currencies": true
+      },
+      "transactions_fixture": "meiko_tokyo_mixed_currency_april_2026"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+[importlinter]
+root_packages =
+    app
+    tests
+
+[importlinter:contract:layers]
+name = Clean architecture layers
+type = layers
+layers =
+    app.main
+    app.inbound
+    app.outbound
+    app.application
+    app.domain
+
+[importlinter:contract:process-roots-independence]
+name = Composition roots do not import each other
+type = independence
+modules =
+    app.main.api
+    app.main.outbox
+    app.main.insight
+    app.main.portrait
+    app.main.scheduler
+    app.main.transaction
+
+[importlinter:contract:inbound-outbound-siblings]
+name = Inbound and outbound do not import each other
+type = forbidden
+source_modules =
+    app.inbound
+forbidden_modules =
+    app.outbound
+ignore_imports =
+    app.inbound.http.middleware.rate_limit -> app.outbound.observability.prometheus
+
+[importlinter:contract:outbound-inbound-siblings]
+name = Outbound does not import from inbound
+type = forbidden
+source_modules =
+    app.outbound
+forbidden_modules =
+    app.inbound
+
+[importlinter:contract:modules]
+name = Bounded context independence (application layer)
+type = independence
+modules =
+    app.application.users
+    app.application.transactions
+    app.application.categories
+    app.application.insights
+    app.application.search
+    app.application.alerts
+    app.application.chat
+    app.application.ingestion
+
+[importlinter:contract:outbound-modules]
+name = Bounded context independence (outbound adapters)
+type = independence
+modules =
+    app.outbound.adapters.sqla.users
+    app.outbound.adapters.sqla.transactions
+    app.outbound.adapters.sqla.categories
+    app.outbound.adapters.sqla.insights
+    app.outbound.adapters.sqla.search
+    app.outbound.adapters.sqla.alerts
+    app.outbound.adapters.sqla.chat
+ignore_imports =
+    app.outbound.adapters.sqla.insights.work_unit_factory -> app.outbound.adapters.sqla.alerts.alert_writer

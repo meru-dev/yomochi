@@ -1,0 +1,1193 @@
+{
+  "version": 1,
+  "persona": "meiko_tokyo",
+  "description": "Tokyo office worker, JPY salary, occasional USD subscriptions. 6 months of data.",
+  "user": {
+    "email": "meiko@demo.yomochi.dev",
+    "password": "Demo2026!meiko"
+  },
+  "recurring": [
+    {
+      "amount": "80000",
+      "currency": "JPY",
+      "type": "expense",
+      "recurrence": "monthly",
+      "start_date": "2025-11-01",
+      "day_of_month": 1,
+      "merchant": "landlord",
+      "notes": "Monthly apartment rent"
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2025-11-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "November rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2025-11-01",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2025-11-03",
+      "type": "EXPENSE",
+      "amount": "850",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-05",
+      "type": "EXPENSE",
+      "amount": "550",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2025-11-06",
+      "type": "EXPENSE",
+      "amount": "680",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-11-07",
+      "type": "EXPENSE",
+      "amount": "1200",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2025-11-10",
+      "type": "EXPENSE",
+      "amount": "4500",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2025-11-10",
+      "type": "EXPENSE",
+      "amount": "7200",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2025-11-12",
+      "type": "EXPENSE",
+      "amount": "650",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-13",
+      "type": "EXPENSE",
+      "amount": "2400",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-11-14",
+      "type": "EXPENSE",
+      "amount": "4500",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2025-11-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2025-11-15",
+      "type": "EXPENSE",
+      "amount": "490",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2025-11-17",
+      "type": "EXPENSE",
+      "amount": "920",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-18",
+      "type": "EXPENSE",
+      "amount": "620",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-11-19",
+      "type": "EXPENSE",
+      "amount": "780",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-20",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2025-11-21",
+      "type": "EXPENSE",
+      "amount": "890",
+      "currency": "JPY",
+      "merchant": "Mos Burger",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-11-22",
+      "type": "EXPENSE",
+      "amount": "3000",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2025-11-23",
+      "type": "EXPENSE",
+      "amount": "1100",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-24",
+      "type": "EXPENSE",
+      "amount": "520",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2025-11-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "November salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2025-11-27",
+      "type": "EXPENSE",
+      "amount": "430",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-11-29",
+      "type": "EXPENSE",
+      "amount": "1450",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-12-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "December rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2025-12-01",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2025-12-02",
+      "type": "EXPENSE",
+      "amount": "1050",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-04",
+      "type": "EXPENSE",
+      "amount": "2800",
+      "currency": "JPY",
+      "merchant": "Yamada Denki",
+      "notes": "USB-C cables",
+      "category_id": "00000000-0000-7000-8002-000000000015"
+    },
+    {
+      "date": "2025-12-05",
+      "type": "EXPENSE",
+      "amount": "470",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2025-12-07",
+      "type": "EXPENSE",
+      "amount": "1350",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2025-12-10",
+      "type": "EXPENSE",
+      "amount": "5200",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2025-12-10",
+      "type": "EXPENSE",
+      "amount": "8100",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2025-12-12",
+      "type": "EXPENSE",
+      "amount": "680",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-14",
+      "type": "EXPENSE",
+      "amount": "5800",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Year-end dinner",
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-12-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2025-12-15",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2025-12-17",
+      "type": "EXPENSE",
+      "amount": "12500",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Christmas gifts",
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2025-12-19",
+      "type": "EXPENSE",
+      "amount": "860",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-21",
+      "type": "EXPENSE",
+      "amount": "3200",
+      "currency": "JPY",
+      "merchant": "Mos Burger",
+      "notes": "Weekend lunch",
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2025-12-22",
+      "type": "EXPENSE",
+      "amount": "540",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2025-12-24",
+      "type": "EXPENSE",
+      "amount": "8900",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Christmas cake, champagne",
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "December salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2025-12-26",
+      "type": "EXPENSE",
+      "amount": "4500",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2025-12-28",
+      "type": "EXPENSE",
+      "amount": "2100",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2025-12-30",
+      "type": "EXPENSE",
+      "amount": "6200",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "New Year groceries",
+      "category_id": "00000000-0000-7000-8002-000000000001"
+    },
+    {
+      "date": "2026-01-01",
+      "type": "EXPENSE",
+      "amount": "3500",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "New Year snacks",
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-01-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "January rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2026-01-04",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2026-01-05",
+      "type": "EXPENSE",
+      "amount": "560",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-01-06",
+      "type": "EXPENSE",
+      "amount": "920",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-01-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-01-10",
+      "type": "EXPENSE",
+      "amount": "6800",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": "Winter bill peak",
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-01-10",
+      "type": "EXPENSE",
+      "amount": "7200",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": "Winter bill peak",
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-01-12",
+      "type": "EXPENSE",
+      "amount": "750",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-01-14",
+      "type": "EXPENSE",
+      "amount": "1900",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-01-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-01-15",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-01-16",
+      "type": "EXPENSE",
+      "amount": "880",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-01-18",
+      "type": "EXPENSE",
+      "amount": "3400",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2026-01-20",
+      "type": "EXPENSE",
+      "amount": "490",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-01-22",
+      "type": "EXPENSE",
+      "amount": "1250",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-01-23",
+      "type": "EXPENSE",
+      "amount": "690",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-01-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "January salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2026-01-26",
+      "type": "EXPENSE",
+      "amount": "2700",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-01-27",
+      "type": "EXPENSE",
+      "amount": "3000",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-01-29",
+      "type": "EXPENSE",
+      "amount": "1040",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "February rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2026-02-01",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2026-02-03",
+      "type": "EXPENSE",
+      "amount": "840",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-05",
+      "type": "EXPENSE",
+      "amount": "2600",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-02-06",
+      "type": "EXPENSE",
+      "amount": "520",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-02-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-02-10",
+      "type": "EXPENSE",
+      "amount": "6500",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-02-10",
+      "type": "EXPENSE",
+      "amount": "6900",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-02-12",
+      "type": "EXPENSE",
+      "amount": "9800",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Valentine chocolates",
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-14",
+      "type": "EXPENSE",
+      "amount": "3200",
+      "currency": "JPY",
+      "merchant": "Mos Burger",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-02-16",
+      "type": "EXPENSE",
+      "amount": "1150",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-18",
+      "type": "EXPENSE",
+      "amount": "29.99",
+      "currency": "USD",
+      "merchant": "Adobe Creative Cloud",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-02-20",
+      "type": "EXPENSE",
+      "amount": "560",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-02-22",
+      "type": "EXPENSE",
+      "amount": "720",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-24",
+      "type": "EXPENSE",
+      "amount": "6200",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2026-02-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "February salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2026-02-26",
+      "type": "EXPENSE",
+      "amount": "930",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-02-28",
+      "type": "EXPENSE",
+      "amount": "2100",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-03-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "March rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2026-03-01",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2026-03-03",
+      "type": "EXPENSE",
+      "amount": "760",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "EXPENSE",
+      "amount": "1800",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-03-06",
+      "type": "EXPENSE",
+      "amount": "500",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-03-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-03-10",
+      "type": "EXPENSE",
+      "amount": "5000",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-03-10",
+      "type": "EXPENSE",
+      "amount": "4800",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-03-12",
+      "type": "EXPENSE",
+      "amount": "1020",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-03-14",
+      "type": "EXPENSE",
+      "amount": "2900",
+      "currency": "JPY",
+      "merchant": "Mos Burger",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-03-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-03-15",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-03-16",
+      "type": "EXPENSE",
+      "amount": "3000",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-03-18",
+      "type": "EXPENSE",
+      "amount": "870",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Cherry blossom hanami snacks",
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-03-20",
+      "type": "EXPENSE",
+      "amount": "5600",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Hanami food prep",
+      "category_id": "00000000-0000-7000-8002-000000000001"
+    },
+    {
+      "date": "2026-03-22",
+      "type": "EXPENSE",
+      "amount": "540",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-03-24",
+      "type": "EXPENSE",
+      "amount": "8100",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "March salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2026-03-26",
+      "type": "EXPENSE",
+      "amount": "1300",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-03-28",
+      "type": "EXPENSE",
+      "amount": "2200",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-03-29",
+      "type": "EXPENSE",
+      "amount": "29.99",
+      "currency": "USD",
+      "merchant": "Adobe Creative Cloud",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-04-01",
+      "type": "EXPENSE",
+      "amount": "80000",
+      "currency": "JPY",
+      "merchant": "landlord",
+      "notes": "April rent",
+      "category_id": "00000000-0000-7000-8002-000000000006"
+    },
+    {
+      "date": "2026-04-01",
+      "type": "EXPENSE",
+      "amount": "8000",
+      "currency": "JPY",
+      "merchant": "Central Sports Club",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000013"
+    },
+    {
+      "date": "2026-04-03",
+      "type": "EXPENSE",
+      "amount": "950",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-04",
+      "type": "EXPENSE",
+      "amount": "510",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-04-06",
+      "type": "EXPENSE",
+      "amount": "1100",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-08",
+      "type": "EXPENSE",
+      "amount": "12000",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "Monthly commute pass",
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-04-10",
+      "type": "EXPENSE",
+      "amount": "4200",
+      "currency": "JPY",
+      "merchant": "Tokyo Electric Power",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-04-10",
+      "type": "EXPENSE",
+      "amount": "3900",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000007"
+    },
+    {
+      "date": "2026-04-12",
+      "type": "EXPENSE",
+      "amount": "680",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-13",
+      "type": "EXPENSE",
+      "amount": "3100",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-04-15",
+      "type": "EXPENSE",
+      "amount": "1980",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-04-15",
+      "type": "EXPENSE",
+      "amount": "18.99",
+      "currency": "USD",
+      "merchant": "Amazon Prime",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000020"
+    },
+    {
+      "date": "2026-04-16",
+      "type": "EXPENSE",
+      "amount": "890",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-18",
+      "type": "EXPENSE",
+      "amount": "4900",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000016"
+    },
+    {
+      "date": "2026-04-20",
+      "type": "EXPENSE",
+      "amount": "480",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000003"
+    },
+    {
+      "date": "2026-04-22",
+      "type": "EXPENSE",
+      "amount": "1650",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    },
+    {
+      "date": "2026-04-23",
+      "type": "EXPENSE",
+      "amount": "730",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-25",
+      "type": "INCOME",
+      "amount": "250000",
+      "currency": "JPY",
+      "merchant": "Acme Corp",
+      "notes": "April salary",
+      "category_id": "00000000-0000-7000-8002-000000000027"
+    },
+    {
+      "date": "2026-04-26",
+      "type": "EXPENSE",
+      "amount": "3000",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000009"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "EXPENSE",
+      "amount": "1180",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000005"
+    },
+    {
+      "date": "2026-04-29",
+      "type": "EXPENSE",
+      "amount": "2500",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": null,
+      "category_id": "00000000-0000-7000-8002-000000000002"
+    }
+  ]
+}

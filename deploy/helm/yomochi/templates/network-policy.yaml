@@ -1,0 +1,83 @@
+{{- if .Values.networkPolicy.enabled -}}
+{{- $fullname := include "yomochi.fullname" . -}}
+{{- $selector := include "yomochi.selectorLabels" . -}}
+
+# --- api: ingress from ingress-nginx only ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-api-ingress
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      {{- $selector | nindent 6 }}
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingressNamespace | default "ingress-nginx" }}
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+# --- api: egress (DNS, datastores, external HTTPS) ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-api-egress
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      {{- $selector | nindent 6 }}
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Egress
+  egress:
+    {{- include "yomochi.commonEgressRules" . | nindent 4 }}
+{{- range $component := list "outbox-worker" "transaction-worker" "insight-worker" "portrait-worker" "scheduler-worker" }}
+---
+# --- {{ $component }}: deny all ingress ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-{{ $component }}-deny-ingress
+  labels:
+    {{- include "yomochi.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- $selector | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes:
+    - Ingress
+  ingress: []
+---
+# --- {{ $component }}: egress (DNS, datastores, external HTTPS) ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-{{ $component }}-egress
+  labels:
+    {{- include "yomochi.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- $selector | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- include "yomochi.commonEgressRules" $ | nindent 4 }}
+{{- end }}
+{{- end }}

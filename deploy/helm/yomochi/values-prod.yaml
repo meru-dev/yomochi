@@ -1,0 +1,76 @@
+image:
+  pullPolicy: Always
+
+api:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+outboxWorker:
+  replicaCount: 1
+
+transactionWorker:
+  replicaCount: 1
+
+insightWorker:
+  replicaCount: 1
+
+portraitWorker:
+  replicaCount: 1
+
+schedulerWorker:
+  replicaCount: 1
+
+web:
+  replicaCount: 1
+  image:
+    pullPolicy: Always
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # Upload size — for future receipt image uploads (ingestion feature)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Force HTTPS redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # IP-based rate limiting — first-line DDoS guard (per-user quota is app-level via Redis)
+    # 30 req/s per IP, burst up to 90 (×3 multiplier), max 20 concurrent connections per IP
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    # Return 429 (not 503) on rate limit breach — client-friendly status code
+    nginx.ingress.kubernetes.io/limit-req-status-code: "429"
+    # cert-manager issues the TLS cert into yomochi-tls Secret. Cluster must have
+    # cert-manager installed and a ClusterIssuer named `letsencrypt-prod`.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: yomochi.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - yomochi.example.com
+      secretName: yomochi-tls
+
+existingSecret: yomochi-secrets
+
+networkPolicy:
+  enabled: true
+
+env:
+  LOG_FORMAT: json
+  OTEL_ENABLED: "true"

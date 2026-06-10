@@ -1,0 +1,25 @@
+{{- if .Values.postgresql.enabled -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: yomochi-pg
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "yomochi.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.postgresql.instances }}
+  # pgvector baked into this image — ghcr.io/cloudnative-pg/pgvector:<major>
+  imageName: {{ .Values.postgresql.image | quote }}
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        # Sealed secret with keys: username=app, password=<pwd>
+        # Must exist before helm install. See deploy/sealed-secrets/pg-user-secret.yaml.example.
+        name: {{ .Values.postgresql.credentialsSecret | quote }}
+  storage:
+    size: {{ .Values.postgresql.storage.size }}
+  resources:
+    {{- toYaml .Values.postgresql.resources | nindent 4 }}
+{{- end }}
