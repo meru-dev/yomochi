@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks scans the PR commit range (commit^..commit); needs full history.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -91,7 +94,7 @@ jobs:
               app_settings=AppSettings(debug=False),
               database_settings=DatabaseSettings(database_url="postgresql+asyncpg://x:y@localhost/z"),
               redis_settings=RedisSettings(redis_url="redis://localhost:6379/0"),
-              auth_settings=AuthSettings(jwt_secret=os.environ["JWT_SECRET"]),
+              auth_settings=AuthSettings(jwt_secret=os.environ["JWT_SECRET"], cookie_secure=True),
               observability_settings=ObservabilitySettings(log_format="console", otel_enabled=False),
           )
           print(json.dumps(app.openapi()))

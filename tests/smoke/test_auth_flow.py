@@ -18,7 +18,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 @pytest.fixture(scope="module")
 def smoke_settings(postgres_url: str, redis_url: str) -> dict:
     return {
-        "app_settings": AppSettings(debug=True),
+        "app_settings": AppSettings(debug=True, rate_limit_enabled=False),
         "database_settings": DatabaseSettings(database_url=postgres_url, db_use_null_pool=True),
         "redis_settings": RedisSettings(redis_url=redis_url),
         "auth_settings": AuthSettings(

@@ -193,13 +193,14 @@ def make_app(
         cookie_samesite=auth_cfg.cookie_samesite,
     )
     app.add_middleware(IdempotencyMiddleware, redis=redis, cookie_name=auth_cfg.cookie_name)
-    trusted_proxies = parse_trusted_proxies(app_cfg.trusted_proxies)
-    app.add_middleware(
-        RateLimitMiddleware,
-        redis=redis,
-        trusted_proxies=trusted_proxies,
-        cookie_name=auth_cfg.cookie_name,
-    )
+    if app_cfg.rate_limit_enabled:
+        trusted_proxies = parse_trusted_proxies(app_cfg.trusted_proxies)
+        app.add_middleware(
+            RateLimitMiddleware,
+            redis=redis,
+            trusted_proxies=trusted_proxies,
+            cookie_name=auth_cfg.cookie_name,
+        )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIdMiddleware)  # outermost — runs first, echoes/generates X-Request-ID
 

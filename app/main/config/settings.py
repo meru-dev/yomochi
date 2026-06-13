@@ -17,6 +17,9 @@ class AppSettings(BaseSettings):
     # When empty, the middleware uses scope["client"][0] verbatim (safe local default).
     # In production behind a LB, set e.g. "10.0.0.0/8,127.0.0.1".
     trusted_proxies: str = ""
+    # Enable per-endpoint rate limiting. Defaults on; tests that exercise flows
+    # not concerned with throttling (e.g. auth smoke tests) disable it.
+    rate_limit_enabled: bool = True
 
 
 class DatabaseSettings(BaseSettings):

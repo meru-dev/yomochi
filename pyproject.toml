@@ -5,8 +5,8 @@ description = "AI-powered expense understanding"
 requires-python = ">=3.13"
 dependencies = [
     # HTTP
-    "fastapi>=0.128.0,<0.129.0",
-    "starlette",
+    "fastapi>=0.133.0,<0.137.0",
+    "starlette>=1.0.1",
     "uvicorn[standard]>=0.34.0,<0.35.0",
     # Pydantic
     "pydantic>=2.10.0,<3.0.0",
@@ -51,9 +51,9 @@ dependencies = [
     # HTTP client — used in openai gateway client factory
     "httpx>=0.27.0,<1.0.0",
     # Image processing — V2 ingestion
-    "Pillow>=11.0.0,<12.0.0",
+    "Pillow>=12.2.0,<13.0.0",
     "pillow-heif>=0.20.0,<1.0.0",
-    "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
+    "prometheus-fastapi-instrumentator>=8.0.0,<9.0.0",
 ]
 
 [dependency-groups]
