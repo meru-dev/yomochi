@@ -16,6 +16,38 @@ class SqlaChunkWriter:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def get_semantic_hash(
+        self,
+        user_id: UserId,
+        chunk_type: str,
+        period_year: int,
+        period_month: int,
+    ) -> str | None:
+        try:
+            row = (
+                await self._session.execute(
+                    sa.text(
+                        """
+                        SELECT semantic_hash
+                        FROM user_financial_chunks
+                        WHERE user_id = :user_id
+                          AND chunk_type = :chunk_type
+                          AND period_year = :period_year
+                          AND period_month = :period_month
+                        """
+                    ),
+                    {
+                        "user_id": user_id.value,
+                        "chunk_type": chunk_type,
+                        "period_year": period_year,
+                        "period_month": period_month,
+                    },
+                )
+            ).fetchone()
+            return str(row.semantic_hash) if row is not None else None
+        except SQLAlchemyError as exc:
+            raise StorageError from exc
+
     async def upsert(self, chunk: ChunkToWrite) -> None:
         if len(chunk.embedding) != _EXPECTED_DIM:
             msg = f"Expected {_EXPECTED_DIM}-dimensional embedding, got {len(chunk.embedding)}"

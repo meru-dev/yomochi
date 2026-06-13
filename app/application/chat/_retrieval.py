@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import Any
 
-from app.application.chat.ports.chat_history_store import ChatHistoryStore, ChatTurn
+from app.application.chat.ports.chat_history_store import ChatTurn
+from app.application.chat.ports.work_unit import ChatWorkUnitFactory
 from app.application.common.context_quality import assess_quality
-from app.application.common.ports.chunk_retriever import ChunkRetriever, RetrievedChunk
+from app.application.common.ports.chunk_retriever import RetrievedChunk
 from app.application.common.ports.text_embedder import TextEmbedder
 from app.domain.value_objects.enums import ContextQuality
 from app.domain.value_objects.ids import UserId
@@ -24,20 +25,28 @@ async def retrieve_context(
     user_id: UserId,
     message: str,
     embedder: TextEmbedder,
-    retriever: ChunkRetriever,
-    history_store: ChatHistoryStore,
+    uow_factory: ChatWorkUnitFactory,
 ) -> ChatContext:
+    """Embed query (no TX) → read chunks + history in one short TX → assess.
+
+    No DB connection is held across the embedder call; the read TX is committed
+    and the connection returned to the pool before the caller starts the LLM call.
+    """
     query_embedding = await embedder.embed(message)
-    chunks = await retriever.search(
-        user_id=user_id,
-        query_embedding=query_embedding,
-        monthly_top_k=MONTHLY_TOP_K,
-        shift_top_k=SHIFT_TOP_K,
-    )
-    portrait = await retriever.get_portrait(user_id)
+
+    async with uow_factory() as uow:
+        chunks = await uow.chunk_retriever.search(
+            user_id=user_id,
+            query_embedding=query_embedding,
+            monthly_top_k=MONTHLY_TOP_K,
+            shift_top_k=SHIFT_TOP_K,
+        )
+        portrait = await uow.chunk_retriever.get_portrait(user_id)
+        history = await uow.history_store.last_n(user_id, n=HISTORY_TURNS)
+
     if portrait:
         chunks = [portrait, *chunks]
-    history = await history_store.last_n(user_id, n=HISTORY_TURNS)
+
     return ChatContext(
         chunks=chunks,
         history=history,

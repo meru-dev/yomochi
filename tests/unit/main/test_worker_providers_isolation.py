@@ -37,7 +37,12 @@ def _context(
     include_kafka: bool = True,
     include_openai: bool = True,
 ) -> dict:
-    ctx: dict = {DatabaseSettings: DatabaseSettings(_env_file=None)}
+    ctx: dict = {
+        DatabaseSettings: DatabaseSettings(
+            database_url="postgresql+asyncpg://yomochi:yomochi@localhost:5432/yomochi",
+            _env_file=None,
+        )
+    }
     if include_redis:
         ctx[RedisSettings] = RedisSettings(_env_file=None)
         ctx[Redis] = Redis.from_url("redis://localhost:6379/0")

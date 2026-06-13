@@ -5,7 +5,7 @@ from app.application.users.use_cases.start_password_reset import (
 )
 from app.domain.value_objects.enums import AuditEventType
 from tests.fakes.id_generator import FakePasswordResetTokenIdGenerator, FakeUserIdGenerator
-from tests.fakes.password_hasher import PlaintextHasher
+from tests.fakes.password_hasher import PlaintextHasher, SpyHasher
 from tests.fakes.repositories import (
     FakeAuditLog,
     FakeMailer,
@@ -26,6 +26,7 @@ def _make_uc(
         token_id_generator=FakePasswordResetTokenIdGenerator(),
         mailer=mailer,
         audit_log=audit,
+        password_hasher=PlaintextHasher(),
     )
 
 
@@ -62,3 +63,20 @@ async def test_silently_succeeds_for_unknown_email() -> None:
     await uc(StartPasswordResetCommand(email="nobody@example.com"))
 
     assert mailer.sent == []
+
+
+async def test_unknown_email_still_calls_verify() -> None:
+    """Hasher.verify must be called on unknown email (timing-oracle fix)."""
+    spy = SpyHasher()
+    uc = StartPasswordResetUseCase(
+        user_repo=FakeUserRepository(),
+        token_store=FakePasswordResetTokenStore(),
+        token_id_generator=FakePasswordResetTokenIdGenerator(),
+        mailer=FakeMailer(),
+        audit_log=FakeAuditLog(),
+        password_hasher=spy,
+    )
+
+    await uc(StartPasswordResetCommand(email="nobody@example.com"))
+
+    assert spy.verify_call_count == 1

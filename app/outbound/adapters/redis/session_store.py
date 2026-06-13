@@ -26,19 +26,29 @@ class RedisSessionStore:
                 "ip": session.ip,
             }
         )
+        now = datetime.now(UTC)
+        ttl = int((session.expires_at - now).total_seconds())
+        if ttl <= 0:
+            return
         score = session.expires_at.timestamp()
         sid = str(session.id_)
         uid = str(session.user_id)
         async with self._redis.pipeline() as pipe:
-            pipe.set(_SESSION_KEY.format(sid=sid), data)
+            pipe.set(_SESSION_KEY.format(sid=sid), data, ex=ttl)
             pipe.zadd(_USER_SESSIONS_KEY.format(uid=uid), {sid: score})
+            pipe.zremrangebyscore(_USER_SESSIONS_KEY.format(uid=uid), min=0, max=now.timestamp())
             await pipe.execute()
 
     async def get(self, session_id: SessionId, user_id: UserId) -> Session | None:
         raw = await self._redis.get(_SESSION_KEY.format(sid=str(session_id)))
         if raw is None:
             return None
-        return _deserialize(json.loads(raw))
+        session = _deserialize(json.loads(raw))
+        if session.user_id != user_id:
+            return None
+        if session.expires_at <= datetime.now(UTC):
+            return None
+        return session
 
     async def revoke(self, session_id: SessionId, user_id: UserId) -> None:
         sid = str(session_id)
@@ -53,10 +63,12 @@ class RedisSessionStore:
         sids: list[bytes] = await self._redis.zrangebyscore(
             _USER_SESSIONS_KEY.format(uid=str(user_id)), min=now, max="+inf"
         )
+        if not sids:
+            return []
+        keys = [_SESSION_KEY.format(sid=sid_bytes.decode()) for sid_bytes in sids]
+        raws: list[bytes | None] = await self._redis.mget(*keys)
         sessions: list[Session] = []
-        for sid_bytes in sids:
-            sid = sid_bytes.decode()
-            raw = await self._redis.get(_SESSION_KEY.format(sid=sid))
+        for raw in raws:
             if raw is not None:
                 sessions.append(_deserialize(json.loads(raw)))
         return sessions

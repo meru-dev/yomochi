@@ -56,6 +56,9 @@ class AuditEventType(StrEnum):
     PASSWORD_RESET_REQUESTED = "password_reset_requested"  # noqa: S105
     PASSWORD_RESET_CONFIRMED = "password_reset_confirmed"  # noqa: S105
     SESSION_REVOKED = "session_revoked"
+    TRANSACTION_CREATED = "transaction_created"
+    TRANSACTION_UPDATED = "transaction_updated"
+    TRANSACTION_DELETED = "transaction_deleted"
 
 
 class RecurringRuleStatus(StrEnum):

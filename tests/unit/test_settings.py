@@ -1,7 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.main.config.settings import AuthSettings, DatabaseSettings
+from app.main.config.loader import enforce_cookie_secure
+from app.main.config.settings import AppSettings, AuthSettings, DatabaseSettings
 
 
 def test_jwt_secret_required_when_empty():
@@ -34,3 +35,31 @@ def test_database_pool_defaults_are_explicit() -> None:
     assert cfg.db_pool_size == 10
     assert cfg.db_max_overflow == 5
     assert cfg.db_pool_recycle_seconds == 1800
+
+
+def test_database_url_required() -> None:
+    """DatabaseSettings must raise when DATABASE_URL is not supplied."""
+    with pytest.raises((ValidationError, ValueError)):
+        DatabaseSettings(_env_file=None)
+
+
+def test_cookie_secure_enforced_in_production() -> None:
+    """enforce_cookie_secure must raise RuntimeError when debug=False and cookie_secure=False."""
+    app_cfg = AppSettings(debug=False, _env_file=None)
+    auth_cfg = AuthSettings(jwt_secret="a" * 32, cookie_secure=False, _env_file=None)
+    with pytest.raises(RuntimeError, match="COOKIE_SECURE"):
+        enforce_cookie_secure(app_cfg, auth_cfg)
+
+
+def test_cookie_secure_allowed_in_debug() -> None:
+    """enforce_cookie_secure must not raise when debug=True (local dev)."""
+    app_cfg = AppSettings(debug=True, _env_file=None)
+    auth_cfg = AuthSettings(jwt_secret="a" * 32, cookie_secure=False, _env_file=None)
+    enforce_cookie_secure(app_cfg, auth_cfg)  # must not raise
+
+
+def test_cookie_secure_ok_when_set() -> None:
+    """enforce_cookie_secure must not raise when cookie_secure=True."""
+    app_cfg = AppSettings(debug=False, _env_file=None)
+    auth_cfg = AuthSettings(jwt_secret="a" * 32, cookie_secure=True, _env_file=None)
+    enforce_cookie_secure(app_cfg, auth_cfg)  # must not raise

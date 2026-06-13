@@ -95,6 +95,16 @@ class EmbeddingPipeline:
         content = format_monthly_summary(aggs)
         semantic_hash = compute_semantic_hash(aggs)
 
+        stored_hash = await self._writer.get_semantic_hash(user_id, "monthly_summary", year, month)
+        if stored_hash == semantic_hash:
+            logger.debug(
+                "embedding_pipeline_skip_monthly",
+                user_id=str(user_id),
+                year=year,
+                month=month,
+            )
+            return
+
         with tracer.start_as_current_span("embed_query"):
             embedding = await self._embedder.embed(content)
 
@@ -131,6 +141,16 @@ class EmbeddingPipeline:
         content = format_shift_text(primary, shifts)
         semantic_hash = compute_semantic_hash(current_aggs, bucket_pct=0.10)
         metadata = {"year": year, "month": month, "shifts": [s.to_metadata() for s in shifts]}
+
+        stored_hash = await self._writer.get_semantic_hash(user_id, "behavioral_shift", year, month)
+        if stored_hash == semantic_hash:
+            logger.debug(
+                "embedding_pipeline_skip_shift",
+                user_id=str(user_id),
+                year=year,
+                month=month,
+            )
+            return
 
         with tracer.start_as_current_span("embed_shift"):
             embedding = await self._embedder.embed(content)

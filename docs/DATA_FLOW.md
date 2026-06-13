@@ -108,6 +108,8 @@ OutboxPoller.run_once()
           └── retry_count ≥ max_retries → SET status=FAILED, failed_at=now()
 ```
 
+**Outbox ordering guarantee:** Per-row retry (each row processed in its own TX, failed rows retried independently) means a later event can be published before an earlier one if the earlier row is retrying. Per-user event ordering is **not guaranteed** across retries. Consumers must be idempotent and commutative — the existing design satisfies this: `DirtyPeriodMarker` uses `ON CONFLICT DO NOTHING`, `ConsumerIdempotencyStore` deduplicates by `event_id` (best-effort check-then-set, not exclusive), and embedding/alert writes are hash-gated upserts. Do not add consumers that depend on strict arrival order.
+
 **Transaction consumer** (transaction-worker, Kafka):
 ```
 Topic: yomochi.transactions.v1
@@ -249,11 +251,8 @@ RequestInsightUseCase
   │   If used >= limit → QuotaExceededError → HTTP 429
   │
   ├── TransactionReader.count_for_period(user_id, year, month)
-  │       If < MIN_TRANSACTIONS → InsufficientTransactionsError → HTTP 422
-  │       (MIN_TRANSACTIONS is currently the hardcoded constant `5` in
-  │        `app/application/insights/use_cases/request_insight.py`;
-  │        `InsightWorkerSettings.min_transactions_for_insight=3` exists but is
-  │        not wired — see bugs.md)
+  │       If < min_transactions_for_insight → InsufficientTransactionsError → HTTP 422
+  │       (read from InsightWorkerConfig; default 3; env MIN_TRANSACTIONS_FOR_INSIGHT)
   ├── Insight.create(status=PENDING)
   ├── OutboxRepository.append(InsightRequested)
   └── COMMIT
@@ -367,13 +366,20 @@ Shared retrieval path:
   │       → answer text (or token stream for SSE)
   │
   ├── [ChatStream only] ChatTokenBudget.record(user_id, tokens_used)
+  │       On client disconnect (usage sentinel never arrives): estimate_tokens
+  │       fallback (chars // 4 + 1) records an estimated spend; logs
+  │       chat_stream_usage_estimated.
   │
   ├── ChatHistoryStore.save_turns(user_id, [
-  │       ChatTurn(role="user",      content=message,  chunks_used=()),
+  │       ChatTurn(role="user",      content=message,  chunks_used=(),
+  │                created_at=clock.now()),        ← first clock.now() call
   │       ChatTurn(role="assistant", content=answer,
   │                chunks_used=[{chunk_type, period_label, similarity}, ...],
-  │                created_at=user_turn.created_at + 1μs)
+  │                created_at=clock.now())         ← second call; later by wall clock
   │   ])
+  │   Ordering guaranteed by monotone UUIDv7 id tie-break:
+  │       ORDER BY created_at DESC, id DESC
+  │   Keyset cursor: (created_at, CAST(id AS uuid)) — no text-lexicographic compare.
   │   └── INSERT INTO chat_turns (id, user_id, role, content,
   │           chunks_used::jsonb, created_at)
   │
@@ -527,7 +533,7 @@ User chats
 | `audit_events` | Login, transaction CRUD, insight requests (partitioned by month) |
 | `password_reset_tokens` | Short-lived tokens for password reset flow |
 
-**Migration baseline:** Alembic ships a single squashed migration `000000000001_squash.py` (collapsed history as of 2026-06-07). The squash already includes the `outbox_events.trace_context JSONB` column from the cross-Kafka trace-propagation work and the `(user_id, created_at DESC, id DESC)` keyset index on `insights`. New schema changes append fresh revisions on top of the squash.
+**Migration baseline:** Alembic ships a single squashed migration `000000000001_squash.py` (re-squashed 2026-06-12; run `alembic history` for the authoritative record). The squash includes: `outbox_events.trace_context JSONB`, the `(user_id, created_at DESC, id DESC)` keyset index on `insights`, audit_events partitions (current + 3 ahead), FKs `fk_audit_events_user_id_users` and `fk_transactions_category_id_categories`, `uq_users_email_lower` functional index, `outbox_events.id` with no server default (client-side UUIDv7), and `ix_transactions_user_id_created_at` replacing the former single-column `ix_transactions_user_id`. New schema changes append fresh revisions on top of the squash.
 
 ---
 

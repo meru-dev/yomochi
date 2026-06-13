@@ -128,7 +128,7 @@ app/
     │   ├── main.py        # Background portrait refresh loop (60s). No Kafka.
     │   └── refresh_tick.py
     └── scheduler/
-        └── main.py        # APScheduler: 5 scheduled jobs (see §4)
+        └── main.py        # APScheduler: 7 scheduled jobs (see §4)
 ```
 
 ## 3. Bounded contexts
@@ -202,9 +202,11 @@ Cross-context communication happens through outbox-emitted events. No direct imp
   ┌────────────────────────────────────────────────────────────┐
   │ scheduler-worker (APScheduler, UTC)                         │
   │ • 00:05 daily:      FireDueRulesUseCase (recurring txns)    │
+  │ • 00:30 monthly:    manage_audit_partitions (create+drop)   │
   │ • 01:00 monthly:    mark all users' prev month → dirty      │
   │ • 03:30 Sunday:     purge alerts older than 90 days         │
   │ • 03:00 Monday:     mark_all_dirty on portrait_queue        │
+  │ • 04:00 daily:      purge SENT outbox rows > 7 days         │
   │ • every 10 min:     reaper_tick (requeue orphaned insights)  │
   └────────────────────────────────────────────────────────────┘
 ```
@@ -216,7 +218,7 @@ Cross-context communication happens through outbox-emitted events. No direct imp
 3. **transaction-worker** — FastStream Kafka consumer on `yomochi.transactions.v1`. Marks `dirty_periods(user_id, year, month)`. No OpenAI dependency. Idempotent via Redis consumer store.
 4. **insight-worker** — FastStream Kafka consumer on `yomochi.insights.v1`. On `InsightRequested`: runs `EmbeddingPipeline.refresh()` → pgvector RAG retrieval → OpenAI chat → `Insight COMPLETED`. Early-fails with `FAILED` status if context_quality = NONE. Background loop (30s): `pop_dirty(limit=20)` → `EmbeddingPipeline.refresh()` per dirty period. Pre-warms chunks between insight requests.
 5. **portrait-worker** — Background-only loop (60s). `pop_dirty(limit=10)` from `portrait_queue` → `PortraitPipeline.refresh(user_id)`: reads last 4 months of transactions → aggregates → embeds → upserts `user_portrait` chunk. On per-user error: requeues the user_id. Sized independently from insight-worker so long insight jobs cannot delay portrait refresh.
-6. **scheduler-worker** — APScheduler with five scheduled jobs (see topology diagram above). No Dishka; directly instantiates adapters. `SELECT FOR UPDATE SKIP LOCKED` + unique constraints make multiple replicas safe. `reaper_tick` runs every 10 min: requeues orphaned-`PROCESSING` insights (lease expired, `retry_count < max_retries`) via outbox re-emit; marks exhausted ones `FAILED`.
+6. **scheduler-worker** — APScheduler with seven scheduled jobs (see topology diagram above). No Dishka; directly instantiates adapters. `SELECT FOR UPDATE SKIP LOCKED` + unique constraints make multiple replicas safe. `reaper_tick` runs every 10 min: requeues orphaned-`PROCESSING` insights (lease expired, `retry_count < max_retries`) via outbox re-emit; marks exhausted ones `FAILED`. `manage_audit_partitions_job` runs monthly (00:30 UTC) and at startup to pre-create upcoming partitions and detach+drop those older than 12 months. `purge_sent_outbox_job` runs daily (04:00 UTC), batch-deleting SENT outbox rows older than 7 days.
 
 No object storage. Uploaded receipts (ingestion) are extracted and discarded — only the extracted JSON survives.
 
@@ -267,10 +269,8 @@ Background pre-warm (within 30s):
 
 ```
 1. Browser POST /v1/insights/requests {period: "monthly"}
-2. api: COUNT transactions for (user_id, year, month); check ≥ MIN_TRANSACTIONS
-        (currently hardcoded constant `5` in `request_insight.py`; the
-        `InsightWorkerSettings.min_transactions_for_insight=3` config exists but
-        is not wired — see bugs.md);
+2. api: COUNT transactions for (user_id, year, month); check ≥ min_transactions_for_insight
+        (read from `InsightWorkerConfig`, default 3, set via env `MIN_TRANSACTIONS_FOR_INSIGHT`);
         create Insight(status=PENDING); emit outbox event "InsightRequested"
 3. outbox-worker → Kafka → insight-worker
 4. insight-worker (on_insight_event):
@@ -307,10 +307,15 @@ Both use the same retrieval path:
        system: financial assistant + chunks as context
        history: last 5 turns
        user: current message
-  7. Save 2 ChatTurns (user + assistant) with chunks_used JSONB
+  7. Save 2 ChatTurns: user turn stamped with first clock.now(), assistant turn
+     with a second clock.now(); ordering relies on monotone UUIDv7 id tie-break
+     (ORDER BY created_at DESC, id DESC). No +1µs arithmetic.
   8. Return {turn_id, answer, context_quality, created_at}
 
 Token budget: Redis-backed ChatTokenBudget enforces per-user per-period cap.
+On client disconnect (SSE cut before the usage sentinel arrives), ChatStreamUseCase
+records an estimated spend via estimate_tokens (chars // 4 + 1) and logs
+chat_stream_usage_estimated, so consumed capacity is never silently skipped.
 ```
 
 ### 5.4 Portrait refresh
@@ -374,7 +379,7 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 | Concern | Approach |
 |---|---|
 | Auth | HS256 JWT in `HttpOnly; Secure; SameSite=Lax` cookie; Redis-backed sessions (`session:<sid>`); per-user sorted-set index `user_sessions:<uid>` scored by `expires_at` for O(log N) listing + automatic stale-trim. |
-| Quota | Per-user per-period limits via `QuotaCheck` port. API process wires `RedisQuotaCheck`; workers wire `NoOpQuotaCheck`. Used by `RequestInsight` and `CreateTransaction`. `refund()` reverses on use-case failure. Limits read from `Plan` value object. NOTE: TODO §"drop Redis compensating-refund (ADR-0023)" is incomplete — port + `RedisQuotaCheck.refund()` still exist; see bugs.md. |
+| Quota | Per-user per-period limits via `QuotaCheck` port. API process wires `SqlaQuotaCheck` (counts from source tables via half-open `created_at` range predicates, backed by `ix_transactions_user_id_created_at`; atomic with the work-TX — no Redis compensating-refund). Workers wire `NoOpQuotaCheck`. Used by `RequestInsight` and `CreateTransaction`. Limits read from `Plan` value object. |
 | Idempotency | `Idempotency-Key` header on every non-idempotent POST; Redis-stored response cache for 24h. Key includes `user_id` to prevent cross-user replay. Distributed `SET NX` lock eliminates TOCTOU race on concurrent duplicate requests. |
 | Rate limiting | Redis sliding-window middleware. Per-user, per-endpoint. Chat enforces per-user 20/min in its controller via pipelined Redis `INCR`+`EXPIRE` (closes race that could lock the user out on crash). |
 | AI concurrency control | `OpenAIGateway`: `httpx.Limits` TCP cap, `aiolimiter.AsyncLimiter(rpm)` token bucket, `purgatory.AsyncCircuitBreaker` fast-fail, per-endpoint `httpx.Timeout`, SDK retry/backoff. Bounded thread pool for bcrypt (work factor 12, pool size 8). |
@@ -385,7 +390,7 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 | Embedding refresh dedup | `dirty_periods` unique constraint on `(user_id, year, month)` — burst marks dirty once. `EmbeddingPipeline` computes `semantic_hash`; upsert skips re-embedding if hash unchanged. N transactions in a month → at most one embedding API call per refresh cycle. |
 | Insight quality guard | `ProcessInsightUseCase` classifies context as FULL/PARTIAL/NONE after RAG retrieval. NONE → `Insight.mark_failed()`. AI is never called without user data. |
 | AI error classification | `ai_errors.py` defines `AITimeoutError` / `AIUnavailableError` (transient — reaper requeues) vs `AIInvalidRequestError` (terminal — mark failed). Classification is at the `OpenAIGateway` / client layer; use cases never catch raw `httpx` or SDK errors. |
-| Chat token budget | `ChatTokenBudget` (Redis) caps total tokens consumed per user per billing period. Enforced in `ChatStreamUseCase` via `StreamUsage` callback. |
+| Chat token budget | `ChatTokenBudget` (Redis) caps total tokens consumed per user per billing period. Enforced in `ChatStreamUseCase` via `StreamUsage` callback. On client disconnect (usage sentinel never arrives), an estimate_tokens fallback (chars // 4 + 1) records an estimated spend so capacity is never silently skipped; logs `chat_stream_usage_estimated`. |
 | Errors | Single error envelope: `{error: {code, message, details, request_id}}`. |
 | Pagination | Cursor-based for lists; cursor = base64(`(created_at, id)`). |
 | Per-user isolation | `user_id` column on every tenant-scoped table. Repositories receive `user_id` from `IdentityContext`. Authorization checked at use-case boundary. |
@@ -470,7 +475,7 @@ Never logged: raw or hashed passwords (`RawPassword` has `repr=False`), full JWT
 | `transaction-worker` | `python -m app.main.transaction.main` | FastStream consumer on `yomochi.transactions.v1`. No OpenAI dependency |
 | `insight-worker` | `python -m app.main.insight.main` | FastStream consumer on `yomochi.insights.v1` + 30s dirty-period embedding refresh loop (per-period TX, concurrent via `Semaphore(4)`). Claims insight with `processing_deadline = now() + 15 min` (lease). |
 | `portrait-worker` | `python -m app.main.portrait.main` | 60s portrait refresh loop, concurrent via `Semaphore(3)`. No Kafka |
-| `scheduler-worker` | `python -m app.main.scheduler.main` | APScheduler — 5 scheduled jobs (see §4). No Dishka |
+| `scheduler-worker` | `python -m app.main.scheduler.main` | APScheduler — 7 scheduled jobs (see §4). No Dishka |
 
 Same Docker image, different `command:` per Helm Deployment (childprofile pattern). All Kafka consumers + outbox/portrait support horizontal scaling (Kafka rebalance / `SKIP LOCKED`).
 
@@ -497,7 +502,7 @@ Same Docker image, different `command:` per Helm Deployment (childprofile patter
 
 ### 10.4 Connection pool
 
-Explicit pool config: `pool_size=10, max_overflow=5, recycle=1800s`. `process_insight` splits TX boundaries (claim TX → no-TX OpenAI calls → save TX) so DB connections are not held across the chat call.
+Explicit pool config: `pool_size=10, max_overflow=5, recycle=1800s`. Two hot paths explicitly release DB connections before long-running external calls: `ProcessInsightUseCase` (claim TX → no-TX OpenAI calls → save TX), and `ChatQueryUseCase` / `ChatStreamUseCase` (TX1 short read via `ChatWorkUnitFactory` — context + history fetched and committed → embedder + LLM call with no session held → TX2 fresh short write to persist turns).
 
 ## 11. Out-of-scope architectural choices
 

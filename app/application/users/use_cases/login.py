@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from app.application.users.audit_event import AuditEvent
-from app.application.users.ports.audit_log import AuditLog
+from app.application.common.audit_event import AuditEvent
+from app.application.common.ports.audit_log import AuditLog
 from app.application.users.ports.session_store import SessionStore
 from app.application.users.ports.user_repository import UserRepository
 from app.application.users.session import Session
@@ -10,11 +10,18 @@ from app.domain.ports.id_generator import SessionIdGenerator
 from app.domain.ports.password_hasher import PasswordHasher
 from app.domain.value_objects.email import Email
 from app.domain.value_objects.enums import AuditEventType
-from app.domain.value_objects.password import RawPassword
+from app.domain.value_objects.password import RawPassword, UserPasswordHash
 
 
 class InvalidCredentialsError(Exception):
     pass
+
+
+# Precomputed bcrypt-12 hash of an arbitrary constant password.
+# Used on the user-not-found path to make timing indistinguishable from
+# the real verify path (~250 ms bcrypt-12 work factor), preventing
+# user-enumeration via response-time oracle.  Do NOT recompute at import time.
+_DUMMY_HASH = UserPasswordHash("$2b$12$FzSGbDqRa0dL0WzZiCQivuY.jetzzuJc1tFFi2JWBwMVVPjQOxtEG")
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,10 +57,12 @@ class LoginUseCase:
     async def __call__(self, command: LoginCommand) -> LoginResult:
         email = Email(command.email)
         user = await self._user_repo.get_by_email(email)
+        raw_password = RawPassword(command.raw_password)
         if user is None:
+            # Constant-time dummy verify to prevent timing-oracle enumeration.
+            await self._password_hasher.verify(raw_password, _DUMMY_HASH)
             raise InvalidCredentialsError()
 
-        raw_password = RawPassword(command.raw_password)
         if not await self._password_hasher.verify(raw_password, user.password_hash):
             raise InvalidCredentialsError()
 

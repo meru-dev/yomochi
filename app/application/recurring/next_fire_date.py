@@ -13,12 +13,14 @@ def compute_first_fire_date(
 ) -> date:
     """Return the first fire date >= start_date for the given schedule."""
     if recurrence == Recurrence.WEEKLY:
-        assert day_of_week is not None
+        if day_of_week is None:
+            raise ValueError("WEEKLY recurrence requires day_of_week")
         days_ahead = (day_of_week - start_date.weekday()) % 7
         return start_date + timedelta(days=days_ahead)
 
     if recurrence == Recurrence.MONTHLY:
-        assert day_of_month is not None
+        if day_of_month is None:
+            raise ValueError("MONTHLY recurrence requires day_of_month")
         max_day = calendar.monthrange(start_date.year, start_date.month)[1]
         candidate = date(start_date.year, start_date.month, min(day_of_month, max_day))
         if candidate < start_date:
@@ -31,8 +33,10 @@ def compute_first_fire_date(
         return candidate
 
     if recurrence == Recurrence.YEARLY:
-        assert day_of_month is not None
-        assert month is not None
+        if day_of_month is None:
+            raise ValueError("YEARLY recurrence requires day_of_month")
+        if month is None:
+            raise ValueError("YEARLY recurrence requires month")
         max_day = calendar.monthrange(start_date.year, month)[1]
         candidate = date(start_date.year, month, min(day_of_month, max_day))
         if candidate < start_date:
@@ -56,7 +60,8 @@ def advance_next_fire_date(
         return current + timedelta(days=7)
 
     if recurrence == Recurrence.MONTHLY:
-        assert day_of_month is not None
+        if day_of_month is None:
+            raise ValueError("MONTHLY recurrence requires day_of_month")
         m = current.month + 1
         y = current.year
         if m > 12:
@@ -65,8 +70,10 @@ def advance_next_fire_date(
         return date(y, m, min(day_of_month, max_day))
 
     if recurrence == Recurrence.YEARLY:
-        assert day_of_month is not None
-        assert month is not None
+        if day_of_month is None:
+            raise ValueError("YEARLY recurrence requires day_of_month")
+        if month is None:
+            raise ValueError("YEARLY recurrence requires month")
         y = current.year + 1
         max_day = calendar.monthrange(y, month)[1]
         return date(y, month, min(day_of_month, max_day))

@@ -27,5 +27,5 @@ class QuotaCheck(Protocol):
         """Check quota from source tables and raise QuotaExceededError if the limit is breached.
 
         Implementations must read from the same session/TX as the caller so the
-        count is consistent with any in-flight inserts (ADR-0023).
+        count is consistent with any in-flight inserts.
         """

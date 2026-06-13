@@ -2,8 +2,8 @@ import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.application.users.audit_event import AuditEvent
-from app.application.users.ports.audit_log import AuditLog
+from app.application.common.audit_event import AuditEvent
+from app.application.common.ports.audit_log import AuditLog
 from app.application.users.ports.password_reset_token_store import PasswordResetTokenStore
 from app.application.users.ports.session_store import SessionStore
 from app.application.users.ports.user_repository import UserRepository

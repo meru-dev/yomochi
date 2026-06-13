@@ -11,6 +11,9 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse, ORJSONResponse
 from fastapi.routing import APIRoute
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 from sqlalchemy import text
@@ -24,6 +27,7 @@ from app.inbound.http.middleware.request_id import RequestIdMiddleware
 from app.inbound.http.middleware.security_headers import SecurityHeadersMiddleware
 from app.inbound.http.router import make_api_router
 from app.main.config.loader import (
+    enforce_cookie_secure,
     load_app_settings,
     load_auth_settings,
     load_chat_settings,
@@ -96,6 +100,7 @@ def make_app(
     chat_cfg = chat_settings or load_chat_settings()
     insight_worker_cfg = insight_worker_settings or load_insight_worker_settings()
 
+    enforce_cookie_secure(app_cfg, auth_cfg)
     configure_logging(log_format=obs_cfg.log_format, debug=app_cfg.debug)
     configure_otel(
         service_name=obs_cfg.otel_service_name,
@@ -104,7 +109,13 @@ def make_app(
     )
     map_tables()
 
-    redis: Redis = Redis.from_url(redis_cfg.redis_url, decode_responses=False)  # type: ignore[type-arg]
+    redis: Redis = Redis.from_url(  # type: ignore[type-arg]
+        redis_cfg.redis_url,
+        decode_responses=False,
+        socket_timeout=2.0,
+        socket_connect_timeout=2.0,
+        health_check_interval=30,
+    )
     container = make_async_container(
         *all_providers(),
         context={
@@ -123,6 +134,11 @@ def make_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         log.info("startup", service=app_cfg.app_name)
+        if obs_cfg.otel_enabled:
+            # SQLAlchemy needs the engine instance (created lazily by the
+            # container), so instrument it here once it is resolvable.
+            engine = await container.get(AsyncEngine)
+            SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
         yield
         log.info("shutdown", service=app_cfg.app_name)
         await container.close()
@@ -147,6 +163,8 @@ def make_app(
 
     if obs_cfg.otel_enabled:
         FastAPIInstrumentor.instrument_app(app)
+        RedisInstrumentor().instrument()
+        HTTPXClientInstrumentor().instrument()
         # Prometheus instrumentation — replaces the legacy HttpMetricsMiddleware.
         # prometheus-fastapi-instrumentator hooks at the Starlette router level
         # which gives accurate templated handlers and proper status codes even
@@ -216,13 +234,13 @@ def _register_routes(app: FastAPI) -> None:
         try:
             engine = await container.get(AsyncEngine)
             await asyncio.wait_for(_check_postgres(engine), timeout=2.0)
-        except BaseException as exc:
+        except Exception as exc:
             ok = False
             checks["postgres"] = f"error: {type(exc).__name__}"
 
         try:
             await asyncio.wait_for(_check_redis(redis_client), timeout=1.0)
-        except BaseException as exc:
+        except Exception as exc:
             ok = False
             checks["redis"] = f"error: {type(exc).__name__}"
 

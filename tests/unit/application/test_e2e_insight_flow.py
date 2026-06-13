@@ -141,6 +141,8 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
         user_plan_lookup=user_plan_lookup,
         category_list_reader=FakeCategoryListReader(),
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
+        dirty_period_marker=AsyncMock(),  # type: ignore[arg-type]
+        audit_log=AsyncMock(),  # type: ignore[arg-type]
     )
 
     # seed 5+ transactions so the insight gating passes

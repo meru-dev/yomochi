@@ -16,7 +16,7 @@ dependencies = [
     "dishka-faststream>=0.6.0,<1.0.0",
     # Error handling
     "fastapi-error-map>=0.9.0,<1.0.0",
-    # IDs — ADR-0012
+    # IDs
     "uuid-utils>=0.15.0,<1.0.0",
     # Persistence
     "sqlalchemy[asyncio]>=2.0.0,<3.0.0",
@@ -26,10 +26,10 @@ dependencies = [
     # Cache / Messaging
     "redis[hiredis]>=5.2.0,<6.0.0",
     "faststream[kafka,redis]>=0.6.0,<1.0.0",
-    # Auth — ADR-0008
+    # Auth
     "pyjwt>=2.10.0,<3.0.0",
     "bcrypt>=4.2.0,<5.0.0",
-    # AI — ADR-0005, ADR-0015
+    # AI
     "openai>=1.60.0,<2.0.0",
     "aiolimiter>=1.2.1,<2.0.0",
     "purgatory>=3.0.0,<4.0.0",
@@ -40,6 +40,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.48b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.48b0",
     "opentelemetry-instrumentation-redis>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
     "opentelemetry-exporter-otlp>=1.27.0,<2.0.0",
     "prometheus-client>=0.21.0,<1.0.0",
     # Serialization
@@ -49,7 +50,7 @@ dependencies = [
     "python-multipart>=0.0.18,<1.0.0",
     # HTTP client — used in openai gateway client factory
     "httpx>=0.27.0,<1.0.0",
-    # Image processing — V2 ingestion (ADR-0006, ADR-0013)
+    # Image processing — V2 ingestion
     "Pillow>=11.0.0,<12.0.0",
     "pillow-heif>=0.20.0,<1.0.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
@@ -76,6 +77,8 @@ dev = [
     "mutmut>=2.4.0",
     # Type stubs
     "types-redis>=4.6.0",
+    # Security scanning
+    "pip-audit>=2.9.0",
 ]
 
 [build-system]

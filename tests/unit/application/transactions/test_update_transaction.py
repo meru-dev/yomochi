@@ -16,6 +16,7 @@ from app.domain.value_objects.enums import TransactionType
 from app.domain.value_objects.ids import TransactionId, UserId
 from app.domain.value_objects.money import Currency, Money
 from tests.fakes.repositories import (
+    FakeAuditLog,
     FakeCategoryListReader,
     FakeOutboxRepository,
     FakeTransactionRepository,
@@ -60,6 +61,7 @@ def _make_uc(
         outbox_repo=outbox,
         dirty_period_marker=dirty_repo,
         category_list_reader=FakeCategoryListReader(),
+        audit_log=FakeAuditLog(),
     )
 
 
@@ -166,6 +168,7 @@ async def test_update_transaction_marks_period_dirty_on_month_change():
         outbox_repo=outbox_repo,
         dirty_period_marker=dirty_repo,
         category_list_reader=FakeCategoryListReader(),
+        audit_log=FakeAuditLog(),
     )
 
     cmd = UpdateTransactionCommand(
@@ -200,6 +203,7 @@ async def test_update_transaction_no_dirty_when_same_month():
         outbox_repo=outbox_repo,
         dirty_period_marker=dirty_repo,
         category_list_reader=FakeCategoryListReader(),
+        audit_log=FakeAuditLog(),
     )
 
     cmd = UpdateTransactionCommand(
@@ -243,12 +247,14 @@ async def test_update_raises_when_category_is_group() -> None:
     dirty.mark_dirty = AsyncMock(return_value=None)
 
     from app.application.transactions.use_cases.update_transaction import UpdateTransactionUseCase
+    from tests.fakes.repositories import FakeAuditLog as _FakeAuditLog
 
     uc = UpdateTransactionUseCase(
         transaction_repo=repo,
         outbox_repo=outbox,
         dirty_period_marker=dirty,
         category_list_reader=reader,
+        audit_log=_FakeAuditLog(),
     )
 
     user_id = UserId(_uuid.uuid4())

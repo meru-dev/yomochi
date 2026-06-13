@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.inbound.http.middleware import rate_limit_policy
 from app.main.api.app_factory import make_app
 from app.main.config.settings import (
     AppSettings,
@@ -29,6 +30,20 @@ def integration_settings(postgres_url: str, redis_url: str) -> dict:
         ),
         "observability_settings": ObservabilitySettings(log_format="console", otel_enabled=False),
     }
+
+
+# ---------------------------------------------------------------------------
+# Rate limits — neutralised: strict per-route policies (register 3/min/IP etc.)
+# would 429 tests that create several users from one client IP. The limiter
+# itself is covered by tests/unit/middleware/test_rate_limit.py.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _relax_rate_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+    generous = rate_limit_policy.Policy(rate_per_minute=100_000, burst=100_000, scope="ip")
+    monkeypatch.setattr(rate_limit_policy, "POLICIES", ())
+    monkeypatch.setattr(rate_limit_policy, "DEFAULT", generous)
 
 
 # ---------------------------------------------------------------------------

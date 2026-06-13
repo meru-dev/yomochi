@@ -12,7 +12,7 @@ class AppSettings(BaseSettings):
     model_config = _ENV
     app_name: str = "yomochi"
     debug: bool = False
-    hasher_thread_pool_size: int = 8  # ADR-0013
+    hasher_thread_pool_size: int = 8
     # Rate limit proxy trust — comma-separated CIDRs/IPs.
     # When empty, the middleware uses scope["client"][0] verbatim (safe local default).
     # In production behind a LB, set e.g. "10.0.0.0/8,127.0.0.1".
@@ -21,7 +21,9 @@ class AppSettings(BaseSettings):
 
 class DatabaseSettings(BaseSettings):
     model_config = _ENV
-    database_url: str = "postgresql+asyncpg://yomochi:yomochi@localhost:5432/yomochi"
+    # No default: missing DATABASE_URL must fail at startup rather than
+    # silently connecting to a hardcoded localhost with embedded credentials.
+    database_url: str
     db_pool_size: int = 10
     db_max_overflow: int = 5
     db_pool_recycle_seconds: int = 1800
@@ -36,7 +38,7 @@ class RedisSettings(BaseSettings):
 
 class AuthSettings(BaseSettings):
     model_config = _ENV
-    # JWT — ADR-0008. No default: must be set via JWT_SECRET env var.
+    # JWT. No default: must be set via JWT_SECRET env var.
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 15
@@ -47,7 +49,7 @@ class AuthSettings(BaseSettings):
     # Cookie
     cookie_name: str = "auth"
     cookie_httponly: bool = True
-    cookie_secure: bool = False  # must be True in production (enforced below)
+    cookie_secure: bool = False  # must be True in production (enforced at app startup in loader.py)
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     cookie_path: str = "/"
 

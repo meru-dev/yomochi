@@ -6,8 +6,15 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
 def configure_otel(service_name: str, otlp_endpoint: str, enabled: bool = True) -> None:
-    """Set up the global OTel TracerProvider. Called once at process startup."""
+    """Set up the global OTel TracerProvider. Called once at process startup.
+
+    Idempotent: if a real (non-proxy) TracerProvider is already installed, leave
+    it in place. OTel itself refuses to override an installed provider, and this
+    guard lets tests seed their own provider without production code clobbering it.
+    """
     if not enabled:
+        return
+    if not isinstance(trace.get_tracer_provider(), trace.ProxyTracerProvider):
         return
 
     resource = Resource.create({SERVICE_NAME: service_name})

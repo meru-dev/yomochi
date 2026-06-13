@@ -9,10 +9,12 @@ from app.application.transactions.use_cases.create_transaction import (
     CreateTransactionUseCase,
 )
 from app.domain.entities.recurring_rule import RecurringRule
+from app.domain.value_objects.ids import RecurringRuleId
 
 logger = structlog.get_logger(__name__)
 
 _BATCH = 50
+_MAX_BATCHES = 100
 
 
 class FireDueRulesUseCase:
@@ -25,15 +27,26 @@ class FireDueRulesUseCase:
         self._create_tx = create_transaction
 
     async def __call__(self, today: date) -> None:
-        while True:
+        failed: set[RecurringRuleId] = set()
+        for batch_num in range(_MAX_BATCHES):
             rules = await self._repo.fetch_due_for_update(as_of=today, limit=_BATCH)
             if not rules:
                 break
-            for rule in rules:
-                await self._fire(rule, today)
-            logger.info("recurring_rules_fired", count=len(rules))
+            pending = [r for r in rules if r.id_ not in failed]
+            if not pending:
+                break
+            fired = 0
+            for rule in pending:
+                ok = await self._fire(rule, today)
+                if ok:
+                    fired += 1
+                else:
+                    failed.add(rule.id_)
+            logger.info("recurring_rules_fired", count=fired, batch=batch_num)
+        else:
+            logger.warning("recurring_fire_batch_cap_reached", cap=_MAX_BATCHES)
 
-    async def _fire(self, rule: RecurringRule, today: date) -> None:
+    async def _fire(self, rule: RecurringRule, today: date) -> bool:
         try:
             cmd = CreateTransactionCommand(
                 user_id=rule.user_id,
@@ -49,7 +62,7 @@ class FireDueRulesUseCase:
             await self._create_tx(cmd)
         except Exception:
             logger.exception("recurring_rule_fire_failed", rule_id=str(rule.id_))
-            return  # do not advance; retry tomorrow
+            return False
 
         # Advance next_fire_date past today (skip missed periods)
         new_next = advance_next_fire_date(
@@ -69,3 +82,4 @@ class FireDueRulesUseCase:
             rule.pause()
 
         await self._repo.save(rule)
+        return True

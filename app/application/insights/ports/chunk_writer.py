@@ -19,6 +19,17 @@ class ChunkToWrite:
 
 class ChunkWriter(Protocol):
     @abstractmethod
+    async def get_semantic_hash(
+        self,
+        user_id: UserId,
+        chunk_type: str,
+        period_year: int,
+        period_month: int,
+    ) -> str | None:
+        """Return the stored semantic_hash for the given chunk key, or None if absent."""
+        ...
+
+    @abstractmethod
     async def upsert(self, chunk: ChunkToWrite) -> None: ...
 
     @abstractmethod

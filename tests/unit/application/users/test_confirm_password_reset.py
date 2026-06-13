@@ -44,6 +44,7 @@ async def _register_and_start_reset(
         token_id_generator=FakePasswordResetTokenIdGenerator(),
         mailer=mailer,
         audit_log=FakeAuditLog(),
+        password_hasher=PlaintextHasher(),
     )(StartPasswordResetCommand(email="alice@example.com"))
 
     return mailer.sent[0][1]

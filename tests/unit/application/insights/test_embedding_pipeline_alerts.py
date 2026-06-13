@@ -197,3 +197,92 @@ async def test_alert_writer_not_called_when_no_shifts():
     await pipeline._write_shift_chunk(uid, 2026, 5, [current], history)
 
     alert_writer.write_shift_alerts.assert_not_called()
+
+
+# ── Semantic-hash skip tests ───────────────────────────────────────────────────
+from app.domain.services.monthly_aggregator import compute_semantic_hash
+
+
+@pytest.mark.asyncio
+async def test_monthly_chunk_skips_embed_when_hash_unchanged():
+    """Embedder NOT called for monthly chunk when stored semantic_hash matches."""
+    aggs = [_make_agg(month=5)]
+    matching_hash = compute_semantic_hash(aggs)
+
+    embedder = AsyncMock()
+    embedder.embed = AsyncMock(return_value=[0.1] * 1536)
+    chunk_writer = AsyncMock()
+    chunk_writer.get_semantic_hash = AsyncMock(return_value=matching_hash)
+    chunk_writer.upsert = AsyncMock()
+
+    pipeline = EmbeddingPipeline(
+        budget_reader=AsyncMock(),
+        chunk_writer=chunk_writer,
+        embedder=embedder,
+    )
+    uid = UserId(uuid4())
+    await pipeline._write_monthly_chunk(uid, 2026, 5, aggs)
+
+    embedder.embed.assert_not_called()
+    chunk_writer.upsert.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_monthly_chunk_embeds_when_hash_differs():
+    """Embedder IS called for monthly chunk when stored hash does not match."""
+    aggs = [_make_agg(month=5)]
+
+    embedder = AsyncMock()
+    embedder.embed = AsyncMock(return_value=[0.1] * 1536)
+    chunk_writer = AsyncMock()
+    chunk_writer.get_semantic_hash = AsyncMock(return_value="stale-hash")
+    chunk_writer.upsert = AsyncMock()
+
+    pipeline = EmbeddingPipeline(
+        budget_reader=AsyncMock(),
+        chunk_writer=chunk_writer,
+        embedder=embedder,
+    )
+    uid = UserId(uuid4())
+    await pipeline._write_monthly_chunk(uid, 2026, 5, aggs)
+
+    embedder.embed.assert_awaited_once()
+    chunk_writer.upsert.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_shift_chunk_skips_embed_when_hash_unchanged():
+    """Embedder NOT called for shift chunk when stored semantic_hash matches."""
+    from decimal import Decimal
+
+    current = _make_agg(month=5, expenses=750)
+    history = [_make_agg(month=m, expenses=500) for m in range(2, 5)]
+    matching_hash = compute_semantic_hash([current], bucket_pct=0.10)
+
+    embedder = AsyncMock()
+    embedder.embed = AsyncMock(return_value=[0.1] * 1536)
+    chunk_writer = AsyncMock()
+    chunk_writer.get_semantic_hash = AsyncMock(return_value=matching_hash)
+    chunk_writer.upsert = AsyncMock()
+
+    high_shift = DetectedShift(
+        type="expense_spike",
+        severity="high",
+        delta_pct=0.5,
+        currency="USD",
+        abs_change=Decimal("200"),
+    )
+    detector = MagicMock()
+    detector.detect = MagicMock(return_value=[high_shift])
+
+    pipeline = EmbeddingPipeline(
+        budget_reader=AsyncMock(),
+        chunk_writer=chunk_writer,
+        embedder=embedder,
+        shift_detector=detector,
+    )
+    uid = UserId(uuid4())
+    await pipeline._write_shift_chunk(uid, 2026, 5, [current], history)
+
+    embedder.embed.assert_not_called()
+    chunk_writer.upsert.assert_not_called()

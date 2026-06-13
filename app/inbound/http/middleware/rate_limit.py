@@ -89,7 +89,8 @@ class RateLimitMiddleware:
             return
 
         path = scope.get("path", "")
-        policy = resolve_policy(path)
+        method = scope.get("method", "")
+        policy = resolve_policy(path, method)
         key = _key_for(scope, policy, self._trusted_proxies, self._cookie_name)
         if key is None:
             # No client and no cookie — we cannot identify the caller. Deny.

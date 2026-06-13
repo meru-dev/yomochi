@@ -3,14 +3,16 @@ from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
+from app.application.common.audit_event import AuditEvent
 from app.application.common.outbox_event import OutboxEvent
+from app.application.common.ports.audit_log import AuditLog
 from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.transactions.ports.category_list_reader import CategoryListReader
 from app.application.transactions.ports.dirty_period_marker import DirtyPeriodMarker
 from app.application.transactions.ports.transaction_repository import TransactionRepository
 from app.application.transactions.use_cases.get_transaction import TransactionNotFoundError
 from app.domain.entities.transaction import _UNSET
-from app.domain.value_objects.enums import TransactionType
+from app.domain.value_objects.enums import AuditEventType, TransactionType
 from app.domain.value_objects.ids import CategoryId, TransactionId, UserId
 from app.domain.value_objects.money import Currency, Money
 
@@ -36,11 +38,13 @@ class UpdateTransactionUseCase:
         outbox_repo: OutboxRepository,
         dirty_period_marker: DirtyPeriodMarker,
         category_list_reader: CategoryListReader,
+        audit_log: AuditLog,
     ) -> None:
         self._transaction_repo = transaction_repo
         self._outbox_repo = outbox_repo
         self._dirty_period_marker = dirty_period_marker
         self._category_list_reader = category_list_reader
+        self._audit_log = audit_log
 
     async def __call__(self, command: UpdateTransactionCommand) -> None:
         if not command.fields_to_update:
@@ -89,6 +93,7 @@ class UpdateTransactionUseCase:
                 await self._dirty_period_marker.mark_dirty(
                     transaction.user_id, new_d.year, new_d.month
                 )
+        now = datetime.now(UTC)
         payload: dict[str, Any] = {"transaction_date": transaction.date.isoformat()}
         if transaction.date != old_date:
             payload["old_date"] = old_date.isoformat()
@@ -97,7 +102,14 @@ class UpdateTransactionUseCase:
                 event_type="TransactionUpdated",
                 aggregate_id=str(transaction.id_),
                 payload=payload,
-                occurred_at=datetime.now(UTC),
+                occurred_at=now,
                 user_id=transaction.user_id.value,
+            )
+        )
+        await self._audit_log.record(
+            AuditEvent(
+                event_type=AuditEventType.TRANSACTION_UPDATED,
+                user_id=transaction.user_id,
+                occurred_at=now,
             )
         )

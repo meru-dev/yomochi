@@ -147,17 +147,16 @@ def test_gcra_recovers_after_interval() -> None:
 
 
 def test_policy_first_prefix_match_wins() -> None:
-    # /v1/chat/stream is listed before /v1/chat — both prefixes match, but
-    # /v1/chat/stream is hit first in the iteration. They happen to share
-    # the same policy here, but the contract is "first-match-wins".
-    p_stream = resolve_policy("/v1/chat/stream")
-    p_chat = resolve_policy("/v1/chat")
+    # POST /api/v1/chat/stream is listed before /api/v1/chat — method entry
+    # for stream is checked first; both use scope="user".
+    p_stream = resolve_policy("/api/v1/chat/stream", "POST")
+    p_chat = resolve_policy("/api/v1/chat", "POST")
     assert p_stream.scope == "user"
     assert p_chat.scope == "user"
 
 
 def test_policy_default_for_unmatched_path() -> None:
-    assert resolve_policy("/v1/random/path") is DEFAULT
+    assert resolve_policy("/api/v1/random/path") is DEFAULT
 
 
 def test_policy_marker_disambiguates_limits() -> None:
@@ -168,7 +167,7 @@ def test_policy_marker_disambiguates_limits() -> None:
 
 def test_auth_policies_are_ip_scoped() -> None:
     # Anonymous login endpoint MUST be IP-keyed — there's no session yet.
-    p = resolve_policy("/v1/auth/login")
+    p = resolve_policy("/api/v1/auth/login")
     assert p.scope == "ip"
 
 
@@ -310,7 +309,7 @@ async def _handler(_req: Request) -> JSONResponse:
 
 
 def _make_app(redis_mock) -> Starlette:
-    app = Starlette(routes=[Route("/v1/auth/login", _handler, methods=["POST"])])
+    app = Starlette(routes=[Route("/api/v1/auth/login", _handler, methods=["POST"])])
     app.add_middleware(
         RateLimitMiddleware,
         redis=redis_mock,
@@ -332,7 +331,7 @@ def test_allow_path_injects_rate_limit_headers() -> None:
     app = _make_app(redis)
     client = TestClient(app, raise_server_exceptions=True)
 
-    r = client.post("/v1/auth/login")
+    r = client.post("/api/v1/auth/login")
 
     assert r.status_code == 200
     assert r.headers["X-RateLimit-Limit"] == "5"  # policy says 5 rpm
@@ -346,7 +345,7 @@ def test_deny_returns_429_with_envelope_and_retry_after() -> None:
     app = _make_app(redis)
     client = TestClient(app, raise_server_exceptions=True)
 
-    r = client.post("/v1/auth/login")
+    r = client.post("/api/v1/auth/login")
 
     assert r.status_code == 429
     assert r.headers["Retry-After"] == "2"  # ceil(1750/1000)
@@ -367,7 +366,7 @@ def test_redis_error_fails_open() -> None:
     app = _make_app(redis)
     client = TestClient(app, raise_server_exceptions=True)
 
-    r = client.post("/v1/auth/login")
+    r = client.post("/api/v1/auth/login")
 
     assert r.status_code == 200  # fails open
     # No X-RateLimit-* injected on the fail-open path.
@@ -418,7 +417,7 @@ def test_request_id_propagates_when_outer_middleware_sets_it() -> None:
     wrapped_app = _PrefixRequestId(inner)
     client = TestClient(wrapped_app, raise_server_exceptions=True)  # type: ignore[arg-type]
 
-    r = client.post("/v1/auth/login")
+    r = client.post("/api/v1/auth/login")
 
     body = json.loads(r.content)
     assert body["error"]["request_id"] == "test-rid-123"
@@ -435,10 +434,66 @@ def test_skip_set_contains_ops_endpoints() -> None:
 
 def test_policy_table_chat_stream_before_chat() -> None:
     """Sanity: more specific path must appear earlier so its policy is matched first."""
-    prefixes = [p for p, _ in POLICIES]
-    assert prefixes.index("/v1/chat/stream") < prefixes.index("/v1/chat")
+    prefixes = [prefix for _method, prefix, _policy in POLICIES]
+    assert prefixes.index("/api/v1/chat/stream") < prefixes.index("/api/v1/chat")
 
 
 def test_reset_seconds_is_positive_ceil() -> None:
     """X-RateLimit-Reset should never round down to 0 when there is any state."""
     assert max(1, math.ceil(1 / 1000)) == 1
+
+
+# ---------- 7. Policy ↔ route coverage ----------
+
+
+def test_every_policy_prefix_matches_at_least_one_registered_route() -> None:
+    """Every POLICIES entry must match at least one real route in the FastAPI app.
+
+    This catches stale prefixes like the old /v1/ingestion/receipts that pointed
+    to a non-existent path.
+    """
+    from app.inbound.http.router import make_api_router
+
+    def collect_paths(routes: list) -> set[str]:
+        paths: set[str] = set()
+        for route in routes:
+            p = getattr(route, "path", "")
+            if p:
+                paths.add(p)
+            sub = getattr(route, "routes", [])
+            if sub:
+                paths.update(collect_paths(sub))
+        return paths
+
+    router = make_api_router()
+    all_paths = collect_paths(router.routes)
+
+    for _method, prefix, _policy in POLICIES:
+        matched = any(p.startswith(prefix) for p in all_paths if p)
+        assert matched, (
+            f"Policy prefix {prefix!r} does not match any registered route. "
+            f"Available paths (sample): {sorted(all_paths)[:10]}"
+        )
+
+
+def test_ingestion_parse_receipt_resolves_to_strict_policy() -> None:
+    """POST /api/v1/ingestion/parse-receipt must get the 10/min strict policy."""
+    policy = resolve_policy("/api/v1/ingestion/parse-receipt", "POST")
+    assert policy.rate_per_minute == 10
+    assert policy is not DEFAULT
+
+
+def test_chat_history_get_does_not_resolve_to_chat_post_policy() -> None:
+    """GET /api/v1/chat/history must NOT be throttled by the POST-chat 20/min policy."""
+    get_policy = resolve_policy("/api/v1/chat/history", "GET")
+    post_policy = resolve_policy("/api/v1/chat", "POST")
+    # The GET history path should fall through to DEFAULT (not the POST chat limit).
+    assert get_policy is DEFAULT
+    assert post_policy is not DEFAULT
+    assert post_policy.rate_per_minute == 20
+
+
+def test_chat_history_delete_does_not_resolve_to_chat_post_policy() -> None:
+    """DELETE /api/v1/chat/history must NOT be throttled by the POST-chat 20/min policy."""
+    delete_policy = resolve_policy("/api/v1/chat/history", "DELETE")
+    assert delete_policy is DEFAULT

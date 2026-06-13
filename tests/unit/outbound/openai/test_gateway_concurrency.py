@@ -36,28 +36,29 @@ def _make_gateway(limiter: AsyncLimiter | None = None) -> OpenAIGateway:
 async def test_limiter_entered_once_per_call() -> None:
     """Each gateway.call() must acquire the limiter exactly once."""
     gateway = _make_gateway()
-    enter_count = 0
+    acquire_count = 0
     real_limiter = gateway._limiter
-    original_aenter = type(real_limiter).__aenter__
+    original_acquire = type(real_limiter).acquire
 
-    async def counting_aenter(self):
-        nonlocal enter_count
-        enter_count += 1
-        return await original_aenter(self)
+    async def counting_acquire(self):
+        nonlocal acquire_count
+        acquire_count += 1
+        return await original_acquire(self)
 
     async def _fn(client):
         return "ok"
 
     # patch.object restores the class attribute on exit — no session-level pollution
     with (
-        patch.object(type(real_limiter), "__aenter__", counting_aenter),
+        patch.object(type(real_limiter), "acquire", counting_acquire),
         patch.object(gw_module, "openai_call_total"),
         patch.object(gw_module, "openai_call_duration_seconds"),
+        patch.object(gw_module, "openai_limiter_waiting"),
     ):
         await gateway.call(endpoint="chat", fn=_fn)
         await gateway.call(endpoint="chat", fn=_fn)
 
-    assert enter_count == 2, f"expected limiter acquired 2 times, got {enter_count}"
+    assert acquire_count == 2, f"expected limiter acquired 2 times, got {acquire_count}"
 
 
 @pytest.mark.asyncio
@@ -78,6 +79,7 @@ async def test_limiter_throttles_excess_calls() -> None:
     with (
         patch.object(gw_module, "openai_call_total"),
         patch.object(gw_module, "openai_call_duration_seconds"),
+        patch.object(gw_module, "openai_limiter_waiting"),
     ):
         await gateway.call(endpoint="chat", fn=_fn)
 

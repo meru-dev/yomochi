@@ -17,7 +17,7 @@ def load_app_settings() -> AppSettings:
 
 
 def load_database_settings() -> DatabaseSettings:
-    return DatabaseSettings()
+    return DatabaseSettings()  # type: ignore[call-arg]
 
 
 def load_redis_settings() -> RedisSettings:
@@ -26,6 +26,19 @@ def load_redis_settings() -> RedisSettings:
 
 def load_auth_settings() -> AuthSettings:
     return AuthSettings()  # type: ignore[call-arg]
+
+
+def enforce_cookie_secure(app_settings: AppSettings, auth_settings: AuthSettings) -> None:
+    """Raise at startup when running non-debug with cookie_secure=False.
+
+    AuthSettings cannot see AppSettings.debug (separate Pydantic models), so
+    the cross-setting invariant is enforced here at the composition boundary.
+    """
+    if not app_settings.debug and not auth_settings.cookie_secure:
+        raise RuntimeError(
+            "COOKIE_SECURE must be True in production (debug=False). "
+            "Set COOKIE_SECURE=true in the environment or enable DEBUG=true for local dev."
+        )
 
 
 def load_openai_settings() -> OpenAISettings:

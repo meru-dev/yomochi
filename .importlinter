@@ -3,6 +3,19 @@ root_packages =
     app
     tests
 
+# Third-party import exceptions documented here (import-linter governs internal layer deps,
+# not third-party packages; these notes record intentional exceptions for future reviewers):
+#
+# opentelemetry in application layer (bugs.md B37 — accepted exception, 2026-06-12):
+#   app/application/insights/embedding_pipeline.py
+#   app/application/insights/use_cases/_process_insight_steps.py
+#   app/application/insights/use_cases/process_insight.py
+#
+#   opentelemetry API is allowed in the application layer as ambient observability,
+#   analogous to logging/structlog — all trace calls are no-ops without an SDK
+#   configured (ProxyTracerProvider). Wrapping in a Tracer port would add a port +
+#   adapter for zero behaviour change. See bugs.md B37 for the full trade-off record.
+
 [importlinter:contract:layers]
 name = Clean architecture layers
 type = layers
@@ -68,3 +81,4 @@ modules =
     app.outbound.adapters.sqla.chat
 ignore_imports =
     app.outbound.adapters.sqla.insights.work_unit_factory -> app.outbound.adapters.sqla.alerts.alert_writer
+    app.outbound.adapters.sqla.chat.work_unit_factory -> app.outbound.adapters.sqla.insights.chunk_retriever

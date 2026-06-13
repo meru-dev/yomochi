@@ -9,6 +9,7 @@ from app.application.common.ports.event_publisher import EventPublisher
 from app.application.common.ports.metrics_recorder import MetricsRecorder
 from app.application.insights.ports.dirty_period_repository import DirtyPeriodRepository
 from app.domain.value_objects.ids import UserId
+from app.inbound.messaging._event_id import resolve_event_id
 
 logger = structlog.get_logger(__name__)
 
@@ -26,7 +27,14 @@ async def handle_transaction_event(
     max_retries: int,
     idempotency_ttl: int,
 ) -> None:
-    event_id: str = body.get("event_id", "")
+    event_id: str = resolve_event_id(body)
+    if not body.get("event_id"):
+        logger.warning(
+            "consumer_event_missing_id",
+            topic=_TOPIC,
+            body_keys=list(body.keys()),
+            event_type=body.get("event_type"),
+        )
     event_type: str = body.get("event_type", "unknown")
 
     if await store.is_processed(event_id):
@@ -58,6 +66,7 @@ async def handle_transaction_event(
             event_id=event_id,
             attempt=failures,
             error=str(exc),
+            exc_info=True,
         )
         if failures >= max_retries:
             await dlq_publisher.publish(
