@@ -39,3 +39,10 @@ repos:
         language: system
         pass_filenames: false
         args: [-m, app]
+
+      - id: openapi-schema
+        name: openapi-schema (regenerate web schema.d.ts)
+        entry: scripts/generate_openapi_schema.sh
+        language: script
+        pass_filenames: false
+        files: '^(app/.*\.py|web/src/lib/api/schema\.d\.ts)$'

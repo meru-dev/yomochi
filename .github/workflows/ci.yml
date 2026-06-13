@@ -81,34 +81,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: web/package-lock.json
       - run: uv sync --all-groups --frozen
-      - name: Export OpenAPI schema
-        run: |
-          uv run python - <<'EOF' > /tmp/openapi.json
-          import json, os
-          from app.main.config.settings import (
-              AppSettings, AuthSettings, DatabaseSettings,
-              ObservabilitySettings, RedisSettings,
-          )
-          from app.main.api.app_factory import make_app
-          app = make_app(
-              app_settings=AppSettings(debug=False),
-              database_settings=DatabaseSettings(database_url="postgresql+asyncpg://x:y@localhost/z"),
-              redis_settings=RedisSettings(redis_url="redis://localhost:6379/0"),
-              auth_settings=AuthSettings(jwt_secret=os.environ["JWT_SECRET"], cookie_secure=True),
-              observability_settings=ObservabilitySettings(log_format="console", otel_enabled=False),
-          )
-          print(json.dumps(app.openapi()))
-          EOF
+      - name: Install web deps
+        run: cd web && npm ci --ignore-scripts
+      - name: Regenerate schema.d.ts
+        run: scripts/generate_openapi_schema.sh
         env:
           JWT_SECRET: "ci-test-secret-must-be-at-least-32bytes!!"
-      - name: Regenerate schema.d.ts
-        run: |
-          cd web
-          npm ci --ignore-scripts
-          npx openapi-typescript /tmp/openapi.json --output /tmp/schema_generated.d.ts
       - name: Check for drift
         run: |
-          diff web/src/lib/api/schema.d.ts /tmp/schema_generated.d.ts || {
+          git diff --exit-code web/src/lib/api/schema.d.ts || {
             echo "::error::schema.d.ts is stale — run 'npm run generate:api' in web/ and commit"
             exit 1
           }

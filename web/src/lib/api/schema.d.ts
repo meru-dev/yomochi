@@ -581,10 +581,7 @@ export interface components {
         };
         /** Body_ingestion_parse_receipt */
         Body_ingestion_parse_receipt: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** CategoryItem */
