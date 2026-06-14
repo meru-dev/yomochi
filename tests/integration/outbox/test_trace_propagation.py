@@ -1,10 +1,3 @@
-import pytest
-
-pytest.skip(
-    "Pending implementation — referenced symbol not yet present in source", allow_module_level=True
-)
-
-
 """W3C TraceContext carry across the outbox hop.
 
 Covers:
@@ -180,6 +173,7 @@ async def test_poller_publishes_with_fresh_trace_when_row_has_null_context(
     async with factory.begin() as session:
         await session.execute(
             sa.insert(outbox_events).values(
+                id=uuid.uuid4(),
                 event_type="TransactionCreated",
                 aggregate_id=str(uuid.uuid4()),
                 payload={},

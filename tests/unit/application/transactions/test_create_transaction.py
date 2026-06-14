@@ -13,6 +13,7 @@ from app.domain.value_objects.enums import Plan, TransactionType
 from app.domain.value_objects.ids import TransactionId, UserId
 from tests.fakes.id_generator import FakeTransactionIdGenerator
 from tests.fakes.repositories import (
+    FakeAuditLog,
     FakeCategoryListReader,
     FakeOutboxRepository,
     FakeTransactionRepository,
@@ -21,6 +22,12 @@ from tests.fakes.repositories import (
 
 def _user_id() -> UserId:
     return UserId(uuid.uuid4())
+
+
+def _make_dirty_marker() -> AsyncMock:
+    m = AsyncMock()
+    m.mark_dirty = AsyncMock()
+    return m
 
 
 def _make_use_case() -> tuple[
@@ -43,6 +50,8 @@ def _make_use_case() -> tuple[
         user_plan_lookup=user_plan_lookup,
         category_list_reader=FakeCategoryListReader(),
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
+        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
+        audit_log=FakeAuditLog(),
     )
     return uc, repo, outbox
 
@@ -182,6 +191,8 @@ async def test_raises_when_category_is_group() -> None:
         user_plan_lookup=user_plan_lookup,
         category_list_reader=reader,
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
+        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
+        audit_log=FakeAuditLog(),
     )
     user_id = _user_id()
 
@@ -231,6 +242,8 @@ async def test_leaf_category_accepted() -> None:
         user_plan_lookup=user_plan_lookup,
         category_list_reader=reader,
         quota_check=_NoOpQuotaCheck2(),  # type: ignore[arg-type]
+        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
+        audit_log=FakeAuditLog(),
     )
     user_id = _user_id()
 

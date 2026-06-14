@@ -94,3 +94,54 @@ async def test_empty_batch_stops_loop() -> None:
     await uc(today=date(2026, 5, 21))
 
     create_tx.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_persistently_failing_rule_terminates_loop() -> None:
+    """A rule that always raises must not spin forever; loop must exit."""
+    bad_rule = _rule(next_fire_date=date(2026, 5, 1), day_of_month=1)
+    good_rule = _rule(next_fire_date=date(2026, 5, 1), day_of_month=1)
+
+    repo = MagicMock()
+    # First batch returns both rules; subsequent batches return only the bad one
+    # (simulating fetch_due_for_update still seeing the non-advanced bad rule).
+    repo.fetch_due_for_update = AsyncMock(
+        side_effect=[[bad_rule, good_rule], [bad_rule], [bad_rule], [bad_rule]]
+    )
+    repo.save = AsyncMock()
+
+    async def create_tx_side_effect(cmd: object) -> None:
+        if cmd.recurring_rule_id == bad_rule.id_:  # type: ignore[union-attr]
+            raise RuntimeError("DB error")
+
+    create_tx = AsyncMock(side_effect=create_tx_side_effect)
+
+    uc = FireDueRulesUseCase(repo=repo, create_transaction=create_tx)
+    await uc(today=date(2026, 5, 21))  # must not hang
+
+    # Good rule was advanced; bad rule was not saved
+    assert good_rule.next_fire_date > date(2026, 5, 21)
+    assert bad_rule.next_fire_date == date(2026, 5, 1)
+    # fetch_due_for_update called at most twice: once for both, once filtered-out → break
+    assert repo.fetch_due_for_update.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_batch_cap_reached_exits_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If _MAX_BATCHES is hit the loop exits without hanging."""
+    import app.application.recurring.use_cases.fire_due_rules as mod
+
+    monkeypatch.setattr(mod, "_MAX_BATCHES", 5)
+    mock_logger = MagicMock()
+    monkeypatch.setattr(mod, "logger", mock_logger)
+
+    repo = MagicMock()
+    repo.fetch_due_for_update = AsyncMock(side_effect=lambda **_kw: [_rule()])
+    repo.save = AsyncMock()
+    create_tx = AsyncMock(side_effect=RuntimeError("always fails"))
+
+    uc = FireDueRulesUseCase(repo=repo, create_transaction=create_tx)
+    await uc(today=date(2026, 5, 21))
+
+    assert repo.fetch_due_for_update.call_count == 5
+    mock_logger.warning.assert_called_once()

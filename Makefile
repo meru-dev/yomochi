@@ -15,9 +15,11 @@ dev-build: ## Build images, start all services + migrate
 down: ## Stop containers (volumes preserved)
 	$(DC) down
 
-reset: ## Wipe DB + rebuild images + migrate (destructive!)
+reset: ## Wipe DB + rebuild all images (incl. migrate) + migrate (destructive!)
 	$(DC) down -v --remove-orphans
-	$(MAKE) dev-build
+	$(DC) --profile migrate build
+	$(DC) up -d
+	$(MAKE) migrate
 
 # ── Migrations ────────────────────────────────────────────────────────────────
 

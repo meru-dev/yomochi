@@ -112,7 +112,11 @@ class Money:
         # normalize() strips trailing zeros so Decimal('320000.0000') → Decimal('3.2E+5'),
         # giving exponent ≥ 0 (actual_places = 0) rather than -4 for JPY validation.
         _sign, _digits, exponent = self.amount.normalize().as_tuple()
-        assert isinstance(exponent, int)
+        if not isinstance(exponent, int):
+            raise InvalidMoneyError(
+                f"Decimal exponent must be an int, got {type(exponent).__name__!r}; "
+                "value is likely NaN or Infinity (should have been caught above)"
+            )
         actual_places = -exponent if exponent < 0 else 0
         if actual_places > self.currency.minor_unit_digits:
             raise InvalidMoneyError(

@@ -5,8 +5,8 @@ from fastapi import Request, status
 from fastapi_error_map import ErrorAwareRouter
 from pydantic import BaseModel
 
-from app.application.users.audit_event import AuditEvent
-from app.application.users.ports.audit_log import AuditLog
+from app.application.common.audit_event import AuditEvent
+from app.application.common.ports.audit_log import AuditLog
 from app.application.users.ports.session_store import SessionStore
 from app.application.users.ports.token_encoder import TokenEncoder
 from app.application.users.session import Session

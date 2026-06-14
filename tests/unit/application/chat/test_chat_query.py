@@ -1,5 +1,6 @@
 # tests/unit/application/chat/test_chat_query.py
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
@@ -7,6 +8,7 @@ import pytest
 
 from app.application.chat.ports.chat_ai_client import ChatRequest, ChatResponse
 from app.application.chat.ports.chat_history_store import ChatTurn
+from app.application.chat.ports.work_unit import ChatWorkUnit
 from app.application.chat.use_cases.chat_query import (
     ChatQueryCommand,
     ChatQueryResult,
@@ -16,6 +18,42 @@ from app.application.insights.ports.chunk_retriever import RetrievedChunk
 from app.domain.value_objects.enums import ContextQuality
 from app.domain.value_objects.ids import UserId
 from app.outbound.adapters.system.uuid7_id_generator import Uuid7ChatTurnIdGenerator
+
+
+class FixedClock:
+    """Clock that returns the same instant on every call.
+
+    A frozen clock means the user and assistant turns share a created_at, so
+    ordering must fall back to the monotone UUID7 ids — exactly the invariant
+    the +1µs hack used to paper over.
+    """
+
+    def __init__(self, instant: datetime) -> None:
+        self._instant = instant
+
+    def now(self) -> datetime:
+        return self._instant
+
+    def today(self):
+        return self._instant.date()
+
+
+class FakeChatWorkUnitFactory:
+    """Hands out a UoW bundling the given retriever + store; counts opens."""
+
+    def __init__(self, retriever, store) -> None:
+        self._uow = ChatWorkUnit(chunk_retriever=retriever, history_store=store)
+        self.opens = 0
+
+    def __call__(self):
+        self.opens += 1
+
+        @asynccontextmanager
+        async def _scope():
+            yield self._uow
+
+        return _scope()
+
 
 _ID_GEN = Uuid7ChatTurnIdGenerator()
 
@@ -75,12 +113,12 @@ def _make_uc(
     budget.record = AsyncMock(return_value=None)
 
     uc = ChatQueryUseCase(
-        chunk_retriever=retriever,
+        work_unit_factory=FakeChatWorkUnitFactory(retriever, store),
         embedder=embedder,
         ai_client=ai_client,
-        history_store=store,
         token_budget=budget,
         id_generator=_ID_GEN,
+        clock=FixedClock(datetime(2026, 6, 12, tzinfo=UTC)),
     )
     return uc, retriever, embedder, ai_client, store
 
@@ -129,6 +167,17 @@ async def test_saves_both_turns():
     assert user_turn.content == "How much on food?"
     assert assistant_turn.role == "assistant"
     assert assistant_turn.content == _AI_RESPONSE.answer
+
+
+@pytest.mark.asyncio
+async def test_frozen_clock_turns_share_timestamp_ordered_by_id():
+    """With a frozen clock both turns share created_at; the assistant turn's
+    UUID7 id must sort strictly after the user turn's so ordering is stable."""
+    uc, _, _, _, store = _make_uc()
+    await uc(ChatQueryCommand(user_id=_UID, message="How much on food?"))
+    user_turn, assistant_turn = store.append_turn_pair.call_args[0][1:3]
+    assert user_turn.created_at == assistant_turn.created_at
+    assert assistant_turn.id > user_turn.id
 
 
 @pytest.mark.asyncio

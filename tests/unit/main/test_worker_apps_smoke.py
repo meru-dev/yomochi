@@ -17,7 +17,9 @@ from app.main.transaction import main as transaction_main
 
 @pytest.fixture
 def db_settings() -> DatabaseSettings:
-    return DatabaseSettings(_env_file=None)
+    return DatabaseSettings(
+        database_url="postgresql+asyncpg://yomochi:yomochi@localhost:5432/yomochi", _env_file=None
+    )
 
 
 @pytest.fixture

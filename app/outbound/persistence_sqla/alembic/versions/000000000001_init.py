@@ -1,3 +1,26 @@
+"""Squashed baseline — final schema in one revision.
+
+Revision ID: 000000000001
+Revises: None
+Create Date: 2026-05-25
+Re-squashed: 2026-06-12
+
+This baseline creates the schema in its FINAL shape. The following follow-up
+migrations were folded in on the 2026-06-12 re-squash and deleted:
+
+- 0002 (audit_partitions_fk): pre-create current + 3 ahead monthly audit_events
+  partitions + ON DELETE SET NULL FK fk_audit_events_user_id_users.
+- 0003 (category_fk_email_lower): FK fk_transactions_category_id_categories
+  (ON DELETE SET NULL) + unique functional index uq_users_email_lower on
+  lower(email).
+- 0004 (outbox_uuid7_drop_redundant_tx_index): outbox_events.id has NO server
+  default (client-side UUIDv7); ix_transactions_user_id replaced by
+  ix_transactions_user_id_created_at.
+
+Data-fix UPDATE steps from 0002/0003 (NULLing orphans) are omitted — the baseline
+runs on an empty database.
+"""
+
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -5,10 +28,24 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "000000000001"
+revision: str = "000000000001_init"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+# ── audit_events partitioning ─────────────────────────────────────────────────
+
+# Pre-create current month + this many future monthly partitions so new rows stop
+# landing in audit_events_default. Naming MUST match manage_audit_partitions_job
+# in app/main/scheduler/main.py: f"audit_events_{year:04d}_{month:02d}".
+_AUDIT_AHEAD_MONTHS = 3
+
+
+def _add_month(year: int, month: int) -> tuple[int, int]:
+    if month == 12:
+        return year + 1, 1
+    return year, month + 1
+
 
 # ── seed data ─────────────────────────────────────────────────────────────────
 
@@ -109,6 +146,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_users")),
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
+    # Case-insensitive uniqueness (defense in depth; Email VO normalizes writes).
+    op.execute("CREATE UNIQUE INDEX uq_users_email_lower ON users (lower(email))")
 
     # ── audit_events (range-partitioned; partition management outside Alembic) ─
     op.execute(
@@ -130,6 +169,28 @@ def upgrade() -> None:
     )
     op.execute("CREATE INDEX ix_audit_events_occurred_at ON audit_events (occurred_at)")
     op.execute("CREATE TABLE audit_events_default PARTITION OF audit_events DEFAULT")
+    # Pre-create current + next 3 monthly partitions so rows leave DEFAULT immediately.
+    today = datetime.now(UTC).date()
+    year, month = today.year, today.month
+    for _ in range(_AUDIT_AHEAD_MONTHS + 1):
+        nxt_year, nxt_month = _add_month(year, month)
+        name = f"audit_events_{year:04d}_{month:02d}"
+        op.execute(
+            f"CREATE TABLE IF NOT EXISTS {name} PARTITION OF audit_events "
+            f"FOR VALUES FROM ('{year:04d}-{month:02d}-01') "
+            f"TO ('{nxt_year:04d}-{nxt_month:02d}-01')"
+        )
+        year, month = nxt_year, nxt_month
+    # GDPR-mandated ON DELETE SET NULL FK on the partitioned parent (inherited by
+    # every partition; PG 11+ supports a FK on the referencing partitioned side).
+    op.create_foreign_key(
+        "fk_audit_events_user_id_users",
+        "audit_events",
+        "users",
+        ["user_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
 
     # ── password_reset_tokens ─────────────────────────────────────────────────
     op.create_table(
@@ -202,12 +263,8 @@ def upgrade() -> None:
     # ── outbox_events ─────────────────────────────────────────────────────────
     op.create_table(
         "outbox_events",
-        sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            nullable=False,
-            server_default=sa.text("gen_random_uuid()"),
-        ),
+        # No server default; application supplies a client-side UUIDv7.
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("event_type", sa.String(100), nullable=False),
         sa.Column("aggregate_id", sa.String(36), nullable=False),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
@@ -322,9 +379,19 @@ def upgrade() -> None:
             name="fk_transactions_recurring_rule_id",
             ondelete="SET NULL",
         ),
+        sa.ForeignKeyConstraint(
+            ["category_id"],
+            ["categories.id"],
+            name="fk_transactions_category_id_categories",
+            ondelete="SET NULL",
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_transactions")),
     )
-    op.create_index(op.f("ix_transactions_user_id"), "transactions", ["user_id"])
+    op.create_index(
+        op.f("ix_transactions_user_id_created_at"),
+        "transactions",
+        ["user_id", "created_at"],
+    )
     op.create_index(op.f("ix_transactions_date"), "transactions", ["date"])
     op.create_index(op.f("ix_transactions_user_id_date"), "transactions", ["user_id", "date"])
     op.create_index(
@@ -587,6 +654,7 @@ def downgrade() -> None:
     op.drop_constraint("fk_categories_parent_id", "categories", type_="foreignkey")
     op.drop_table("categories")
     op.drop_table("password_reset_tokens")
-    op.execute("DROP TABLE audit_events_default")
-    op.execute("DROP TABLE audit_events")
+    # Dropping the partitioned parent cascades to audit_events_default and every
+    # pre-created monthly partition, and drops fk_audit_events_user_id_users.
+    op.execute("DROP TABLE audit_events CASCADE")
     op.drop_table("users")

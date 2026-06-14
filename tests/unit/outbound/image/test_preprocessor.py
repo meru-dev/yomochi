@@ -1,5 +1,6 @@
 import asyncio
 import io
+from concurrent.futures import ThreadPoolExecutor
 
 import pillow_heif
 import pytest
@@ -20,6 +21,7 @@ def _make_preprocessor(max_dimension: int = 1568) -> PillowImagePreprocessor:
         semaphore=asyncio.Semaphore(1),
         max_dimension=max_dimension,
         jpeg_quality=85,
+        thread_pool=ThreadPoolExecutor(max_workers=1),
     )
 
 

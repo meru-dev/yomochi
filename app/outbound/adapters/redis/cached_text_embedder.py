@@ -9,6 +9,11 @@ _TTL_SECONDS = 86400  # 24h
 _PREFIX = "embed:"
 
 
+def _cache_key(text: str) -> str:
+    """Full 256-bit hex digest — no birthday collisions at realistic cache sizes."""
+    return _PREFIX + hashlib.sha256(text.encode()).hexdigest()
+
+
 class CachedTextEmbedder:
     """Decorator that caches TextEmbedder results in Redis."""
 
@@ -17,7 +22,7 @@ class CachedTextEmbedder:
         self._redis = redis
 
     async def embed(self, text: str) -> list[float]:
-        key = _PREFIX + hashlib.sha256(text.encode()).hexdigest()[:16]
+        key = _cache_key(text)
         cached = await self._redis.get(key)
         if cached is not None:
             return list(json.loads(cached))
@@ -30,7 +35,7 @@ class CachedTextEmbedder:
         misses: list[tuple[int, str]] = []
 
         for i, text in enumerate(texts):
-            key = _PREFIX + hashlib.sha256(text.encode()).hexdigest()[:16]
+            key = _cache_key(text)
             cached = await self._redis.get(key)
             if cached is not None:
                 results[i] = json.loads(cached)
@@ -42,7 +47,6 @@ class CachedTextEmbedder:
             embeddings = await self._inner.embed_batch(miss_texts)
             for (idx, text), emb in zip(misses, embeddings, strict=False):
                 results[idx] = emb
-                key = _PREFIX + hashlib.sha256(text.encode()).hexdigest()[:16]
-                await self._redis.set(key, json.dumps(emb), ex=_TTL_SECONDS)
+                await self._redis.set(_cache_key(text), json.dumps(emb), ex=_TTL_SECONDS)
 
         return results  # type: ignore[return-value]

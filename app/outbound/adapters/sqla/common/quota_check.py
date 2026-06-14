@@ -38,7 +38,7 @@ class SqlaQuotaCheck:
     ) -> None:
         # "Increment" is the caller's INSERT in the same TX — no separate counter.
         # count() here reads committed rows; if count >= limit, the new insert
-        # would exceed the quota. ADR-0023.
+        # would exceed the quota.
         limit = _PLAN_LIMITS.get(plan, {}).get(resource, 0)
         year, month = _current_year_month()
         count = await self._count(user_id, resource, year, month)
@@ -48,12 +48,18 @@ class SqlaQuotaCheck:
 
     async def _count(self, user_id: UserId, resource: QuotaResource, year: int, month: int) -> int:
         table = transactions if resource == QuotaResource.TRANSACTIONS else insights
+        month_start = datetime(year, month, 1, tzinfo=UTC)
+        next_month_start = (
+            datetime(year + 1, 1, 1, tzinfo=UTC)
+            if month == 12
+            else datetime(year, month + 1, 1, tzinfo=UTC)
+        )
         try:
             result = await self._session.execute(
                 sa.select(sa.func.count()).where(
                     table.c.user_id == user_id,
-                    sa.extract("year", table.c.created_at) == year,
-                    sa.extract("month", table.c.created_at) == month,
+                    table.c.created_at >= month_start,
+                    table.c.created_at < next_month_start,
                 )
             )
             return result.scalar_one()

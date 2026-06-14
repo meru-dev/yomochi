@@ -1,3 +1,4 @@
+import asyncio
 import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from app.outbound.observability.prometheus import (
     openai_call_duration_seconds,
     openai_call_total,
     openai_circuit_state,
+    openai_limiter_waiting,
     openai_tokens_total,
 )
 
@@ -64,11 +66,19 @@ class OpenAIGateway:
             else self._default_scoped_client
         )
         breaker = self._breakers[endpoint]
+        gauge = openai_limiter_waiting.labels(endpoint=endpoint)
         start = time.perf_counter()
         try:
-            async with breaker, self._limiter:
+            gauge.inc()
+            try:
+                await self._limiter.acquire()
+            finally:
+                gauge.dec()
+            async with breaker:
                 result = await fn(scoped_client)
         except BaseException as exc:
+            if isinstance(exc, asyncio.CancelledError):
+                raise
             translated = map_exception(exc)
             openai_call_total.labels(endpoint=endpoint, outcome=outcome_label(translated)).inc()
             self._record_state(breaker)
@@ -104,11 +114,17 @@ class OpenAIGateway:
             else self._default_scoped_client
         )
         breaker = self._breakers[endpoint]
+        gauge = openai_limiter_waiting.labels(endpoint=endpoint)
         prompt_tokens = 0
         completion_tokens = 0
         success = False
         try:
-            async with breaker, self._limiter:
+            gauge.inc()
+            try:
+                await self._limiter.acquire()
+            finally:
+                gauge.dec()
+            async with breaker:
                 response = await scoped_client.chat.completions.create(  # type: ignore[call-overload]
                     model=model,
                     messages=messages,
@@ -127,6 +143,8 @@ class OpenAIGateway:
         except GeneratorExit:
             raise
         except BaseException as exc:
+            if isinstance(exc, asyncio.CancelledError):
+                raise
             translated = map_exception(exc)
             openai_call_total.labels(endpoint=endpoint, outcome=outcome_label(translated)).inc()
             self._record_state(breaker)

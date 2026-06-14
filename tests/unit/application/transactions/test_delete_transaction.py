@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -13,7 +14,7 @@ from app.domain.entities.transaction import Transaction
 from app.domain.value_objects.enums import TransactionType
 from app.domain.value_objects.ids import TransactionId, UserId
 from app.domain.value_objects.money import Currency, Money
-from tests.fakes.repositories import FakeOutboxRepository, FakeTransactionRepository
+from tests.fakes.repositories import FakeAuditLog, FakeOutboxRepository, FakeTransactionRepository
 
 
 def _make_tx(user_id: UserId) -> Transaction:
@@ -30,10 +31,21 @@ def _make_tx(user_id: UserId) -> Transaction:
     )
 
 
+def _make_dirty_marker() -> AsyncMock:
+    m = AsyncMock()
+    m.mark_dirty = AsyncMock()
+    return m
+
+
 def _make_uc(
     repo: FakeTransactionRepository, outbox: FakeOutboxRepository
 ) -> DeleteTransactionUseCase:
-    return DeleteTransactionUseCase(transaction_repo=repo, outbox_repo=outbox)
+    return DeleteTransactionUseCase(
+        transaction_repo=repo,
+        outbox_repo=outbox,
+        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
+        audit_log=FakeAuditLog(),
+    )
 
 
 async def test_deletes_transaction() -> None:

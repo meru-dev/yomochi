@@ -13,3 +13,6 @@ data:
   {{- if .Values.env.KAFKA_BOOTSTRAP_SERVERS }}
   KAFKA_BOOTSTRAP_SERVERS: {{ .Values.env.KAFKA_BOOTSTRAP_SERVERS | quote }}
   {{- end }}
+  {{- if .Values.env.COOKIE_SECURE }}
+  COOKIE_SECURE: {{ .Values.env.COOKIE_SECURE | quote }}
+  {{- end }}

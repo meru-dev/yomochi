@@ -169,6 +169,69 @@ async def test_retries_before_dlq() -> None:
     assert event_id in store._processed
 
 
+async def test_malformed_payload_missing_insight_id_goes_through_failure_path() -> None:
+    """InsightRequested with empty insight_id must raise → increment_failures, NOT mark_processed."""
+    store = _FakeStore()
+    dlq = _FakeDlq()
+    event_id = str(uuid.uuid4())
+    body = {
+        "event_id": event_id,
+        "event_type": "InsightRequested",
+        "payload": {
+            # insight_id intentionally absent / empty
+            "user_id": str(uuid.uuid4()),
+        },
+    }
+
+    with pytest.raises(ValueError, match="insight_event_malformed_payload"):
+        await handle_insight_event(
+            body,
+            store=store,
+            dlq_publisher=dlq,
+            process_insight=_SucceedingProcessInsight(),
+            metrics=_FakeMetrics(),
+            dlq_topic="dlq.insights",
+            max_retries=3,
+            idempotency_ttl=86400,
+        )
+
+    # failure counter bumped — event NOT silently buried as processed
+    assert store._failures.get(event_id, 0) == 1
+    assert event_id not in store._processed
+    assert len(dlq.published) == 0
+
+
+async def test_malformed_payload_missing_user_id_goes_through_failure_path() -> None:
+    """InsightRequested with empty user_id must raise → increment_failures, NOT mark_processed."""
+    store = _FakeStore()
+    dlq = _FakeDlq()
+    event_id = str(uuid.uuid4())
+    body = {
+        "event_id": event_id,
+        "event_type": "InsightRequested",
+        "payload": {
+            "insight_id": str(uuid.uuid4()),
+            # user_id intentionally absent / empty
+        },
+    }
+
+    with pytest.raises(ValueError, match="insight_event_malformed_payload"):
+        await handle_insight_event(
+            body,
+            store=store,
+            dlq_publisher=dlq,
+            process_insight=_SucceedingProcessInsight(),
+            metrics=_FakeMetrics(),
+            dlq_topic="dlq.insights",
+            max_retries=3,
+            idempotency_ttl=86400,
+        )
+
+    assert store._failures.get(event_id, 0) == 1
+    assert event_id not in store._processed
+    assert len(dlq.published) == 0
+
+
 async def test_parks_in_dlq_and_marks_processed_at_max_retries() -> None:
     store = _FakeStore()
     dlq = _FakeDlq()

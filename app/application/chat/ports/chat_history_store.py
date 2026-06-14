@@ -40,10 +40,10 @@ class ChatHistoryStore(Protocol):
     async def append_turn_pair(
         self, user_id: UserId, user_turn: ChatTurn, assistant_turn: ChatTurn
     ) -> tuple[ChatTurn, ChatTurn]:
-        """Persist a (user, assistant) exchange. The adapter guarantees the
-        assistant turn sorts after the user turn for cursor-paginated reads,
-        even when both turns were constructed at the same instant. Returns
-        the as-stored pair (the assistant `created_at` may be adjusted)."""
+        """Persist a (user, assistant) exchange verbatim. The caller must
+        stamp the pair so the assistant sorts after the user under
+        (created_at, id) ordering — two clock reads plus monotone UUIDv7
+        ids give this for free. Returns the as-stored pair."""
         ...
 
     async def list_for_user(

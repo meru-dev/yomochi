@@ -5,10 +5,14 @@ import redis.asyncio as aioredis
 import structlog
 from dishka import make_async_container
 from dishka_faststream import FromDishka, setup_dishka
-from faststream import FastStream
+from faststream import AckPolicy, Context, FastStream
 from faststream.kafka import KafkaBroker
+from opentelemetry import trace
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.application.common.ports.consumer_idempotency_store import ConsumerIdempotencyStore
 from app.application.common.ports.event_publisher import EventPublisher
@@ -40,9 +44,12 @@ from app.main.ioc.worker_providers import (
     WorkerInfraProvider,
 )
 from app.main.logging import configure_logging
+from app.outbound.observability.otel import configure_otel
+from app.outbound.observability.propagation import extract_context
 from app.outbound.persistence_sqla.mappings.all import map_tables
 
 logger = structlog.get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 _CONSUMER_GROUP = "insight-worker"
 _REFRESH_INTERVAL_SECONDS = 30
@@ -79,6 +86,11 @@ async def _embedding_refresh_loop(
             ],
             return_exceptions=True,
         )
+        # The per-task wrapper catches Exception; this guards BaseException /
+        # cancellation leaks that gather would otherwise discard silently.
+        for r in results:
+            if isinstance(r, BaseException):
+                logger.error("embedding_refresh_task_error", exc_info=r)
         processed = sum(1 for r in results if r is True)
         if processed:
             logger.info("embedding_refresh_tick", processed=processed)
@@ -99,9 +111,23 @@ def make_app(
 
     map_tables()
     configure_logging(log_format=obs_cfg.log_format, debug=False)
+    configure_otel(
+        service_name="yomochi-insight-worker",
+        otlp_endpoint=obs_cfg.otel_exporter_otlp_endpoint,
+        enabled=obs_cfg.otel_enabled,
+    )
+
+    if obs_cfg.otel_enabled:
+        RedisInstrumentor().instrument()
+        HTTPXClientInstrumentor().instrument()
 
     broker = KafkaBroker(bootstrap_servers=kafka_cfg.kafka_bootstrap_servers)
-    redis_client: Redis = aioredis.from_url(redis_cfg.redis_url)  # type: ignore[type-arg]
+    redis_client: Redis = aioredis.from_url(  # type: ignore[type-arg]
+        redis_cfg.redis_url,
+        socket_timeout=2.0,
+        socket_connect_timeout=2.0,
+        health_check_interval=30,
+    )
 
     container = make_async_container(
         WorkerInfraProvider(),
@@ -118,24 +144,37 @@ def make_app(
         },
     )
 
-    @broker.subscriber(kafka_cfg.kafka_topic_insights, group_id=_CONSUMER_GROUP)
+    # NACK_ON_ERROR: commit after success; on handler exception seek back for
+    # redelivery. Bounded by the consumer's failure counter -> DLQ at max_retries.
+    @broker.subscriber(
+        kafka_cfg.kafka_topic_insights,
+        group_id=_CONSUMER_GROUP,
+        ack_policy=AckPolicy.NACK_ON_ERROR,
+    )
     async def on_insight_event(
         body: dict[str, Any],
         store: FromDishka[ConsumerIdempotencyStore],
         dlq_publisher: FromDishka[EventPublisher],
         process_insight: FromDishka[ProcessInsightUseCase],
         metrics: FromDishka[MetricsRecorder],
+        headers: dict[str, Any] = Context("message.headers"),  # noqa: B008
     ) -> None:
-        await handle_insight_event(
-            body,
-            store=store,
-            dlq_publisher=dlq_publisher,
-            process_insight=process_insight,
-            metrics=metrics,
-            dlq_topic=kafka_cfg.kafka_topic_dlq,
-            max_retries=kafka_cfg.consumer_max_retries,
-            idempotency_ttl=kafka_cfg.consumer_idempotency_ttl_seconds,
-        )
+        # Resume the producer's trace (carried over the outbox -> Kafka hop) so
+        # consumer-side work shares one trace api -> outbox -> kafka -> worker.
+        parent = extract_context(headers)
+        with tracer.start_as_current_span(
+            "insight.consume", context=parent, kind=trace.SpanKind.CONSUMER
+        ):
+            await handle_insight_event(
+                body,
+                store=store,
+                dlq_publisher=dlq_publisher,
+                process_insight=process_insight,
+                metrics=metrics,
+                dlq_topic=kafka_cfg.kafka_topic_dlq,
+                max_retries=kafka_cfg.consumer_max_retries,
+                idempotency_ttl=kafka_cfg.consumer_idempotency_ttl_seconds,
+            )
 
     app = FastStream(broker)
     setup_dishka(container, app, auto_inject=True)
@@ -144,6 +183,9 @@ def make_app(
 
     @app.on_startup
     async def _start_refresh_loop() -> None:
+        if obs_cfg.otel_enabled:
+            engine = await container.get(AsyncEngine)
+            SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
         sf = await container.get(async_sessionmaker[AsyncSession])
         emb = await container.get(TextEmbedder)
         det = await container.get(BehavioralShiftDetector)

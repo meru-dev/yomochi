@@ -43,6 +43,7 @@ async def test_poller_marks_event_sent(pg_url: str) -> None:
         result = await session.execute(
             sa.insert(outbox_events)
             .values(
+                id=uuid.uuid4(),
                 event_type="TransactionCreated",
                 aggregate_id=str(uuid.uuid4()),
                 payload={},
@@ -91,6 +92,7 @@ async def test_poller_leaves_pending_on_kafka_failure(pg_url: str) -> None:
         result = await session.execute(
             sa.insert(outbox_events)
             .values(
+                id=uuid.uuid4(),
                 event_type="TransactionCreated",
                 aggregate_id=str(uuid.uuid4()),
                 payload={},

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.application.users.audit_event import AuditEvent
+from app.application.common.audit_event import AuditEvent
 from app.domain.value_objects.enums import AuditEventType
 from app.domain.value_objects.ids import UserId
 from app.outbound.adapters.sqla.users.audit_log import SqlaAuditLog

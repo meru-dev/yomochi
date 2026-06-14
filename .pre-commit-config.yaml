@@ -1,9 +1,13 @@
 repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.0
     hooks:
       - id: ruff
-        args: [--fix]
       - id: ruff-format
 
   - repo: local
@@ -35,3 +39,10 @@ repos:
         language: system
         pass_filenames: false
         args: [-m, app]
+
+      - id: openapi-schema
+        name: openapi-schema (regenerate web schema.d.ts)
+        entry: scripts/generate_openapi_schema.sh
+        language: script
+        pass_filenames: false
+        files: '^(app/.*\.py|web/src/lib/api/schema\.d\.ts)$'

@@ -38,6 +38,7 @@ async def _seed_pending_events(factory, n: int) -> list[uuid.UUID]:
             result = await session.execute(
                 sa.insert(outbox_events)
                 .values(
+                    id=uuid.uuid4(),
                     event_type="TransactionCreated",
                     aggregate_id=str(uuid.uuid4()),
                     payload={"transaction_date": "2026-05-18"},

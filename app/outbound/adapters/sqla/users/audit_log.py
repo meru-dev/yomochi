@@ -5,8 +5,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.common.audit_event import AuditEvent
 from app.application.common.exceptions import StorageError
-from app.application.users.audit_event import AuditEvent
 
 
 class SqlaAuditLog:

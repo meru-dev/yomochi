@@ -13,6 +13,7 @@ from app.application.insights.use_cases.process_insight import (
     ProcessInsightCommand,
     ProcessInsightUseCase,
 )
+from app.inbound.messaging._event_id import resolve_event_id
 
 logger = structlog.get_logger(__name__)
 
@@ -30,7 +31,14 @@ async def handle_insight_event(
     max_retries: int,
     idempotency_ttl: int,
 ) -> None:
-    event_id: str = body.get("event_id", "")
+    event_id: str = resolve_event_id(body)
+    if not body.get("event_id"):
+        logger.warning(
+            "consumer_event_missing_id",
+            topic=_TOPIC,
+            body_keys=list(body.keys()),
+            event_type=body.get("event_type"),
+        )
     event_type: str = body.get("event_type", "unknown")
 
     if await store.is_processed(event_id):
@@ -42,23 +50,26 @@ async def handle_insight_event(
         if event_type == "InsightRequested":
             insight_id: str = body.get("payload", {}).get("insight_id", "")
             user_id: str = body.get("payload", {}).get("user_id", "")
-            if insight_id and user_id:
-                try:
-                    result = await process_insight(
-                        ProcessInsightCommand(insight_id=insight_id, user_id=user_id)
-                    )
-                    metrics.insight_generation_observed(
-                        result.context_quality.value, result.elapsed_seconds
-                    )
-                except (InsightAlreadyTerminalError, InsightNotFoundError) as terminal:
-                    # Re-delivery of an event whose insight is already terminal/missing.
-                    # Treat as success: mark_processed so we don't DLQ a durably-done row.
-                    logger.info(
-                        "insight_event_terminal_skip",
-                        event_id=event_id,
-                        insight_id=insight_id,
-                        reason=type(terminal).__name__,
-                    )
+            if not insight_id or not user_id:
+                raise ValueError(
+                    f"insight_event_malformed_payload: insight_id={insight_id!r} user_id={user_id!r}"
+                )
+            try:
+                result = await process_insight(
+                    ProcessInsightCommand(insight_id=insight_id, user_id=user_id)
+                )
+                metrics.insight_generation_observed(
+                    result.context_quality.value, result.elapsed_seconds
+                )
+            except (InsightAlreadyTerminalError, InsightNotFoundError) as terminal:
+                # Re-delivery of an event whose insight is already terminal/missing.
+                # Treat as success: mark_processed so we don't DLQ a durably-done row.
+                logger.info(
+                    "insight_event_terminal_skip",
+                    event_id=event_id,
+                    insight_id=insight_id,
+                    reason=type(terminal).__name__,
+                )
         else:
             logger.info("insight_event_ignored", event_id=event_id, event_type=event_type)
 
@@ -71,6 +82,7 @@ async def handle_insight_event(
             event_id=event_id,
             attempt=failures,
             error=str(exc),
+            exc_info=True,
         )
         if failures >= max_retries:
             await dlq_publisher.publish(

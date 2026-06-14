@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.application.users.audit_event import AuditEvent
-from app.application.users.ports.audit_log import AuditLog
+from app.application.common.audit_event import AuditEvent
+from app.application.common.ports.audit_log import AuditLog
 from app.application.users.ports.session_store import SessionStore
 from app.domain.value_objects.enums import AuditEventType
 from app.domain.value_objects.ids import SessionId, UserId

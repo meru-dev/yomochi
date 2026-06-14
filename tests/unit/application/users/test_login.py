@@ -10,7 +10,7 @@ from app.application.users.use_cases.login import (
 )
 from app.domain.value_objects.enums import AuditEventType
 from tests.fakes.id_generator import FakeSessionIdGenerator, FakeUserIdGenerator
-from tests.fakes.password_hasher import PlaintextHasher
+from tests.fakes.password_hasher import PlaintextHasher, SpyHasher
 from tests.fakes.repositories import FakeAuditLog, FakeSessionStore, FakeUserRepository
 
 _TTL = timedelta(days=30)
@@ -73,6 +73,24 @@ async def test_login_fails_with_unknown_email() -> None:
 
     with pytest.raises(InvalidCredentialsError):
         await uc(_CMD)
+
+
+async def test_login_unknown_email_still_calls_verify() -> None:
+    """Hasher.verify must be called even when user is not found (timing-oracle fix)."""
+    spy = SpyHasher()
+    uc = LoginUseCase(
+        user_repo=FakeUserRepository(),
+        password_hasher=spy,
+        session_store=FakeSessionStore(),
+        session_id_generator=FakeSessionIdGenerator(),
+        audit_log=FakeAuditLog(),
+        session_ttl=_TTL,
+    )
+
+    with pytest.raises(InvalidCredentialsError):
+        await uc(_CMD)
+
+    assert spy.verify_call_count == 1
 
 
 async def test_session_is_persisted() -> None:

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.application.alerts.ports.alert_repository import AlertRepository
+from app.application.common.ports.audit_log import AuditLog
 from app.application.common.ports.consumer_idempotency_store import ConsumerIdempotencyStore
 from app.application.common.ports.event_publisher import EventPublisher
 from app.application.common.ports.metrics_recorder import MetricsRecorder
@@ -20,6 +21,7 @@ from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.common.ports.quota_check import QuotaCheck
 from app.application.common.ports.text_embedder import TextEmbedder
 from app.application.common.ports.user_plan_lookup import UserPlanLookup
+from app.application.insights.config import InsightWorkerConfig
 from app.application.insights.ports.ai_insight_client import AIInsightClient
 from app.application.insights.ports.alert_writer import AlertWriter
 from app.application.insights.ports.budget_summary_reader import BudgetSummaryReader
@@ -34,11 +36,17 @@ from app.application.insights.use_cases.process_insight import ProcessInsightUse
 from app.application.recurring.ports.recurring_rule_repository import RecurringRuleRepository
 from app.application.recurring.use_cases.fire_due_rules import FireDueRulesUseCase
 from app.application.transactions.ports.category_list_reader import CategoryListReader
+from app.application.transactions.ports.dirty_period_marker import DirtyPeriodMarker
 from app.application.transactions.ports.transaction_repository import TransactionRepository
 from app.application.transactions.use_cases.create_transaction import CreateTransactionUseCase
 from app.domain.ports.id_generator import InsightIdGenerator, TransactionIdGenerator
 from app.domain.services.behavioral_shift_detector import BehavioralShiftDetector
-from app.main.config.settings import DatabaseSettings, KafkaSettings, OpenAISettings
+from app.main.config.settings import (
+    DatabaseSettings,
+    InsightWorkerSettings,
+    KafkaSettings,
+    OpenAISettings,
+)
 from app.outbound.adapters.kafka.event_publisher import KafkaEventPublisher
 from app.outbound.adapters.openai._gateway import (
     OpenAIGateway,
@@ -47,6 +55,7 @@ from app.outbound.adapters.openai._gateway import (
 )
 from app.outbound.adapters.openai.insight_client import OpenAIInsightClient
 from app.outbound.adapters.openai.text_embedder import OpenAITextEmbedder
+from app.outbound.adapters.redis.cached_text_embedder import CachedTextEmbedder
 from app.outbound.adapters.redis.consumer_idempotency_store import RedisConsumerIdempotencyStore
 from app.outbound.adapters.sqla.alerts.alert_repository import SqlaAlertRepository
 from app.outbound.adapters.sqla.alerts.alert_writer import SqlaAlertWriter
@@ -63,7 +72,9 @@ from app.outbound.adapters.sqla.recurring.recurring_rule_repository import (
     SqlaRecurringRuleRepository,
 )
 from app.outbound.adapters.sqla.transactions.category_list_reader import SqlaCategoryListReader
+from app.outbound.adapters.sqla.transactions.dirty_period_marker import SqlaDirtyPeriodMarker
 from app.outbound.adapters.sqla.transactions.transaction_repository import SqlaTransactionRepository
+from app.outbound.adapters.sqla.users.audit_log import SqlaAuditLog
 from app.outbound.adapters.sqla.users.user_plan_lookup import SqlaUserPlanLookup
 from app.outbound.adapters.system.noop_quota_check import NoOpQuotaCheck
 from app.outbound.adapters.system.uuid7_id_generator import (
@@ -109,8 +120,18 @@ class WorkerInfraProvider(Provider):
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
     ) -> AsyncIterator[AsyncSession]:
-        async with factory.begin() as session:
-            yield session
+        # Per-job unit of work. dishka finalizes generator providers via
+        # ``agen.asend(exception)``, so the handler's exception is the *value*
+        # returned by ``yield`` — it is NOT re-raised inside this frame.
+        # ``factory.begin()`` would commit even on a failed job, masking the real
+        # error and persisting partial work. Commit only on success; roll back
+        # otherwise so a failed job leaves no half-written state.
+        async with factory() as session:
+            exception = yield session
+            if exception is None:
+                await session.commit()
+            else:
+                await session.rollback()
 
     @provide(scope=Scope.APP)
     async def openai_gateway(self, cfg: OpenAISettings) -> AsyncIterator[OpenAIGateway]:
@@ -172,8 +193,8 @@ class WorkerAdaptersInsightProvider(Provider):
         )
 
     @provide(scope=Scope.APP)
-    def text_embedder_port(self, impl: OpenAITextEmbedder) -> TextEmbedder:
-        return impl
+    def text_embedder_port(self, impl: OpenAITextEmbedder, redis: Redis) -> TextEmbedder:  # type: ignore[type-arg]
+        return CachedTextEmbedder(inner=impl, redis=redis)
 
     @provide(scope=Scope.APP)
     def ai_insight_client(
@@ -190,6 +211,15 @@ class WorkerAdaptersInsightProvider(Provider):
     @provide(scope=Scope.APP)
     def ai_insight_client_port(self, impl: OpenAIInsightClient) -> AIInsightClient:
         return impl
+
+    @provide(scope=Scope.APP)
+    def insight_worker_config(self) -> InsightWorkerConfig:
+        """Load InsightWorkerSettings from env and convert to the domain config object."""
+        s = InsightWorkerSettings()
+        return InsightWorkerConfig(
+            min_transactions_for_insight=s.min_transactions_for_insight,
+            reaper_lease_minutes=s.reaper_lease_minutes,
+        )
 
     insight_id_gen = provide(Uuid7InsightIdGenerator, provides=InsightIdGenerator)
 
@@ -258,12 +288,14 @@ class InsightUseCasesProvider(Provider):
         embedder: TextEmbedder,
         ai_client: AIInsightClient,
         detector: BehavioralShiftDetector,
+        config: InsightWorkerConfig,
     ) -> ProcessInsightUseCase:
         return ProcessInsightUseCase(
             work_unit_factory=factory,
             embedder=embedder,
             ai_client=ai_client,
             shift_detector=detector,
+            config=config,
         )
 
 
@@ -286,6 +318,8 @@ class SchedulerProvider(Provider):
     dirty_period_repo = provide(SqlaDirtyPeriodRepository, provides=DirtyPeriodRepository)
     portrait_queue = provide(SqlaPortraitQueue, provides=PortraitQueue)
     insight_repo = provide(SqlaInsightRepository, provides=InsightRepository)
+    dirty_period_marker = provide(SqlaDirtyPeriodMarker, provides=DirtyPeriodMarker)
+    audit_log = provide(SqlaAuditLog, provides=AuditLog)
 
     @provide(scope=Scope.APP)
     def transaction_id_generator(self) -> TransactionIdGenerator:

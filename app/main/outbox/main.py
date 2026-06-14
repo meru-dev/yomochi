@@ -1,7 +1,10 @@
 import asyncio
+import contextlib
+import signal
 
 import structlog
 from faststream.kafka import KafkaBroker
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.application.common.ports.event_publisher import EventPublisher
@@ -17,6 +20,7 @@ from app.main.config.settings import (
 )
 from app.main.logging import configure_logging
 from app.outbound.adapters.kafka.event_publisher import KafkaEventPublisher
+from app.outbound.observability.otel import configure_otel
 from app.outbound.outbox.poller import OutboxPoller
 from app.outbound.persistence_sqla.mappings.all import map_tables
 
@@ -30,8 +34,22 @@ async def run(
 ) -> None:
     map_tables()
     configure_logging(log_format=obs_settings.log_format, debug=False)
+    configure_otel(
+        service_name="yomochi-outbox",
+        otlp_endpoint=obs_settings.otel_exporter_otlp_endpoint,
+        enabled=obs_settings.otel_enabled,
+    )
 
-    engine = create_async_engine(db_settings.database_url, pool_pre_ping=True)
+    engine = create_async_engine(
+        db_settings.database_url,
+        pool_pre_ping=True,
+        pool_size=2,
+        max_overflow=2,
+        pool_timeout=10,
+        pool_recycle=1800,
+    )
+    if obs_settings.otel_enabled:
+        SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
     session_factory = async_sessionmaker(engine, autoflush=False, expire_on_commit=False)
 
     broker = KafkaBroker(bootstrap_servers=kafka_settings.kafka_bootstrap_servers, acks="all")
@@ -53,16 +71,25 @@ async def run(
         max_retries=kafka_settings.outbox_max_retries,
     )
 
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, stop.set)
+
     logger.info("outbox_worker_started")
     try:
-        while True:
+        while not stop.is_set():
             try:
                 sent = await poller.run_once()
                 if sent:
                     logger.info("outbox_batch_sent", count=sent)
             except Exception:
                 logger.exception("outbox_poll_error")
-            await asyncio.sleep(kafka_settings.outbox_poll_interval_seconds)
+            # Wake immediately on shutdown instead of sleeping out the interval.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    stop.wait(), timeout=kafka_settings.outbox_poll_interval_seconds
+                )
     finally:
         await broker.close()
         await engine.dispose()

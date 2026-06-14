@@ -24,7 +24,7 @@ def _lid(n: int) -> str:
     return f"00000000-0000-7000-8002-{n:012d}"
 
 
-# Leaf category IDs (match 000000000001_squash.py _LEAVES)
+# Leaf category IDs (match 000000000001_init.py _LEAVES)
 CAT_GROCERIES = _lid(1)
 CAT_RESTAURANTS = _lid(2)
 CAT_CAFES = _lid(3)

@@ -1,9 +1,9 @@
 from datetime import date, datetime
 from uuid import UUID
 
+from app.application.common.audit_event import AuditEvent
 from app.application.common.outbox_event import OutboxEvent
 from app.application.transactions.ports.category_list_reader import CategoryListItem
-from app.application.users.audit_event import AuditEvent
 from app.application.users.password_reset_token import PasswordResetToken
 from app.application.users.session import Session
 from app.domain.entities.category import Category

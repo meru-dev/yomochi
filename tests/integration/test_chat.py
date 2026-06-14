@@ -120,12 +120,7 @@ async def test_chat_send_validates_empty_message(client: AsyncClient) -> None:
     assert resp.status_code == 422, resp.text
 
 
-async def test_chat_send_requires_auth() -> None:
-    from httpx import ASGITransport, AsyncClient
-
-    from app.main.api.app_factory import make_app
-
-    fresh = AsyncClient(transport=ASGITransport(app=make_app()), base_url="http://test")
-    async with fresh:
-        resp = await fresh.post("/api/v1/chat", json={"message": "hello"})
+async def test_chat_send_requires_auth(client: AsyncClient) -> None:
+    # client fixture has a fresh cookie jar — no auth cookie set.
+    resp = await client.post("/api/v1/chat", json={"message": "hello"})
     assert resp.status_code in (401, 403), resp.text

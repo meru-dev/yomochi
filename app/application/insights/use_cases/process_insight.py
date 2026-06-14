@@ -6,6 +6,7 @@ import structlog
 from opentelemetry import trace
 
 from app.application.common.ports.text_embedder import TextEmbedder
+from app.application.insights.config import InsightWorkerConfig
 from app.application.insights.ports.ai_insight_client import AIInsightClient, InsightRequest
 from app.application.insights.ports.insight_repository import (
     InsightAlreadyTerminalError,
@@ -58,11 +59,13 @@ class ProcessInsightUseCase:
         embedder: TextEmbedder,
         ai_client: AIInsightClient,
         shift_detector: BehavioralShiftDetector | None = None,
+        config: InsightWorkerConfig | None = None,
     ) -> None:
         self._uow_factory = work_unit_factory
         self._embedder = embedder
         self._ai_client = ai_client
         self._shift_detector = shift_detector or BehavioralShiftDetector()
+        self._config = config or InsightWorkerConfig()
 
     async def __call__(self, command: ProcessInsightCommand) -> ProcessInsightResult:
         insight_id = InsightId(UUID(command.insight_id))
@@ -70,7 +73,10 @@ class ProcessInsightUseCase:
 
         try:
             claimed: ClaimedInsight = await claim_insight(
-                self._uow_factory, insight_id, user_id, lease_minutes=15
+                self._uow_factory,
+                insight_id,
+                user_id,
+                lease_minutes=self._config.reaper_lease_minutes,
             )
         except InsightAlreadyTerminalError as exc:
             logger.info(
@@ -139,6 +145,7 @@ class ProcessInsightUseCase:
                 insight_id=command.insight_id,
                 error=str(exc),
                 elapsed_seconds=elapsed,
+                exc_info=True,
             )
             await record_failure(
                 self._uow_factory,

@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
+from opentelemetry import trace
+from opentelemetry.context import Context
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.common.ports.event_publisher import EventPublisher
@@ -11,11 +13,28 @@ from app.outbound.observability.prometheus import (
     outbox_pending_total,
     outbox_relay_total,
 )
+from app.outbound.observability.propagation import PROPAGATOR
 from app.outbound.persistence_sqla.mappings.outbox_event import outbox_events
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 _TOPIC_MAP_TYPE = dict[str, str]
+
+
+def _extract_parent_context(value: Any) -> Context | None:
+    """Resume the producer's trace from a stored trace_context carrier.
+
+    Returns None for NULL / non-dict / empty / unrecognized carriers so a row
+    with no usable context simply publishes on a fresh trace instead of
+    orphan-attaching to a bogus parent.
+    """
+    if not isinstance(value, dict) or not value:
+        return None
+    ctx = PROPAGATOR.extract(value)
+    if trace.get_current_span(ctx).get_span_context().is_valid:
+        return ctx
+    return None
 
 
 class OutboxPoller:
@@ -92,7 +111,11 @@ class OutboxPoller:
 
                 message = _build_message(row)
                 key = row["user_id"].bytes if row["user_id"] else None
-                await self._publisher.publish(message, topic, key=key)
+                parent = _extract_parent_context(row["trace_context"])
+                with tracer.start_as_current_span(
+                    "outbox.publish", context=parent, kind=trace.SpanKind.INTERNAL
+                ):
+                    await self._publisher.publish(message, topic, key=key)
 
                 await session.execute(
                     sa.update(outbox_events)

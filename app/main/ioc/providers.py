@@ -1,9 +1,10 @@
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from typing import Any
 
+import structlog
 from dishka import Provider, Scope, from_context, provide
 from redis.asyncio import Redis
 from sqlalchemy import event
@@ -27,10 +28,13 @@ from app.application.chat.ports.chat_ai_client import ChatAIClient
 from app.application.chat.ports.chat_history_store import ChatHistoryStore
 from app.application.chat.ports.chat_token_budget import ChatTokenBudget
 from app.application.chat.ports.id_generator import ChatTurnIdGenerator
+from app.application.chat.ports.work_unit import ChatWorkUnitFactory
 from app.application.chat.use_cases.chat_query import ChatQueryUseCase
 from app.application.chat.use_cases.chat_stream import ChatStreamUseCase
 from app.application.chat.use_cases.clear_chat_history import ClearChatHistoryUseCase
 from app.application.chat.use_cases.list_chat_history import ListChatHistoryUseCase
+from app.application.common.ports.audit_log import AuditLog
+from app.application.common.ports.clock import Clock
 from app.application.common.ports.flusher import Flusher
 from app.application.common.ports.identity_context import IdentityContext
 from app.application.common.ports.outbox_repository import OutboxRepository
@@ -83,7 +87,6 @@ from app.application.transactions.use_cases.parse_transaction_text import (
 )
 from app.application.transactions.use_cases.update_transaction import UpdateTransactionUseCase
 from app.application.users.ports.audit_event_reader import AuditEventReader
-from app.application.users.ports.audit_log import AuditLog
 from app.application.users.ports.mailer import Mailer
 from app.application.users.ports.password_reset_token_store import PasswordResetTokenStore
 from app.application.users.ports.session_store import SessionStore
@@ -129,12 +132,14 @@ from app.outbound.adapters.openai.chat_client import OpenAIChatClient
 from app.outbound.adapters.openai.receipt_extractor import OpenAIReceiptExtractor
 from app.outbound.adapters.openai.text_embedder import OpenAITextEmbedder
 from app.outbound.adapters.openai.transaction_text_parser import OpenAITransactionTextParser
+from app.outbound.adapters.redis.cached_text_embedder import CachedTextEmbedder
 from app.outbound.adapters.redis.chat_token_budget import RedisChatTokenBudget
 from app.outbound.adapters.redis.search_cache import RedisSearchCache
 from app.outbound.adapters.redis.session_store import RedisSessionStore
 from app.outbound.adapters.sqla.alerts.alert_repository import SqlaAlertRepository
 from app.outbound.adapters.sqla.categories.category_repository import SqlaCategoryRepository
 from app.outbound.adapters.sqla.chat.chat_history_store import SqlaChatHistoryStore
+from app.outbound.adapters.sqla.chat.work_unit_factory import SqlaChatWorkUnitFactory
 from app.outbound.adapters.sqla.common.flusher import SqlaFlusher
 from app.outbound.adapters.sqla.common.outbox_repository import SqlaOutboxRepository
 from app.outbound.adapters.sqla.common.quota_check import SqlaQuotaCheck
@@ -162,6 +167,7 @@ from app.outbound.adapters.sqla.users.password_reset_token_store import SqlaPass
 from app.outbound.adapters.sqla.users.user_plan_lookup import SqlaUserPlanLookup
 from app.outbound.adapters.sqla.users.user_repository import SqlaUserRepository
 from app.outbound.adapters.system.bcrypt_password_hasher import BcryptPasswordHasher
+from app.outbound.adapters.system.clock import SystemClock
 from app.outbound.adapters.system.config_upload_policy import ConfigUploadPolicy
 from app.outbound.adapters.system.stdout_mailer import StdoutMailer
 from app.outbound.adapters.system.uuid7_id_generator import (
@@ -192,7 +198,10 @@ class InfraProvider(Provider):
 
     @provide(scope=Scope.APP)
     def insight_worker_config(self, s: InsightWorkerSettings) -> InsightWorkerConfig:
-        return InsightWorkerConfig(min_transactions_for_insight=s.min_transactions_for_insight)
+        return InsightWorkerConfig(
+            min_transactions_for_insight=s.min_transactions_for_insight,
+            reaper_lease_minutes=s.reaper_lease_minutes,
+        )
 
 
 class PersistenceProvider(Provider):
@@ -226,8 +235,18 @@ class PersistenceProvider(Provider):
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
     ) -> AsyncIterator[AsyncSession]:
-        async with factory.begin() as session:
-            yield session
+        # Request-scoped unit of work. dishka finalizes generator providers via
+        # ``agen.asend(exception)``, so the exception raised by the handler is the
+        # *value* returned by ``yield`` — it is NOT re-raised inside this frame.
+        # ``factory.begin()`` would therefore commit on every request, even failed
+        # ones, masking the real error behind ``InFailedSQLTransactionError`` at
+        # commit time. Commit only on success; roll back otherwise.
+        async with factory() as session:
+            exception = yield session
+            if exception is None:
+                await session.commit()
+            else:
+                await session.rollback()
 
 
 class RequestProvider(Provider):
@@ -251,6 +270,10 @@ class CommonAdaptersProvider(Provider):
 
     outbox_repo = provide(SqlaOutboxRepository, provides=OutboxRepository)
     flusher = provide(SqlaFlusher, provides=Flusher)
+
+    @provide(scope=Scope.APP)
+    def clock(self) -> Clock:
+        return SystemClock()
 
     @provide(scope=Scope.APP)
     async def openai_gateway(self, cfg: OpenAISettings) -> AsyncIterator[OpenAIGateway]:
@@ -284,8 +307,8 @@ class CommonAdaptersProvider(Provider):
         )
 
     @provide(scope=Scope.APP)
-    def text_embedder(self, impl: OpenAITextEmbedder) -> TextEmbedder:
-        return impl
+    def text_embedder(self, impl: OpenAITextEmbedder, redis: Redis) -> TextEmbedder:  # type: ignore[type-arg]
+        return CachedTextEmbedder(inner=impl, redis=redis)
 
     @provide(scope=Scope.REQUEST)
     def quota_check(self, session: AsyncSession) -> QuotaCheck:
@@ -325,7 +348,17 @@ class UsersAdaptersProvider(Provider):
     audit_event_reader = provide(SqlaAuditEventReader, provides=AuditEventReader)
     token_store = provide(SqlaPasswordResetTokenStore, provides=PasswordResetTokenStore)
     session_store = provide(RedisSessionStore, provides=SessionStore)
-    mailer = provide(StdoutMailer, provides=Mailer)
+
+    @provide(scope=Scope.APP)
+    def mailer(self, cfg: AppSettings) -> Mailer:
+        if not cfg.debug:
+            structlog.get_logger(__name__).warning(
+                "stdout_mailer_in_use",
+                note="StdoutMailer is active in a non-debug environment. "
+                "Password-reset emails are written to the log, not delivered. "
+                "Wire a real SMTP adapter (feature F16) before going to production.",
+            )
+        return StdoutMailer()
 
     user_id_gen = provide(Uuid7UserIdGenerator, provides=UserIdGenerator)
     session_id_gen = provide(Uuid7SessionIdGenerator, provides=SessionIdGenerator)
@@ -503,42 +536,48 @@ class ChatAdaptersProvider(Provider):
             read_timeout_seconds=settings.openai_read_timeout_chat_seconds,
         )
 
+    @provide(scope=Scope.APP)
+    def chat_work_unit_factory(
+        self, session_factory: async_sessionmaker[AsyncSession]
+    ) -> ChatWorkUnitFactory:
+        return SqlaChatWorkUnitFactory(session_factory)
+
     @provide(scope=Scope.REQUEST)
     def chat_query(
         self,
-        retriever: ChunkRetriever,
+        work_unit_factory: ChatWorkUnitFactory,
         embedder: TextEmbedder,
         ai_client: ChatAIClient,
-        store: ChatHistoryStore,
         token_budget: ChatTokenBudget,
         id_generator: ChatTurnIdGenerator,
+        clock: Clock,
     ) -> ChatQueryUseCase:
         return ChatQueryUseCase(
-            chunk_retriever=retriever,
+            work_unit_factory=work_unit_factory,
             embedder=embedder,
             ai_client=ai_client,
-            history_store=store,
             token_budget=token_budget,
             id_generator=id_generator,
+            clock=clock,
         )
 
     @provide(scope=Scope.REQUEST)
     def chat_stream(
         self,
-        retriever: ChunkRetriever,
+        work_unit_factory: ChatWorkUnitFactory,
         embedder: TextEmbedder,
         ai_client: ChatAIClient,
-        store: ChatHistoryStore,
         token_budget: ChatTokenBudget,
         id_generator: ChatTurnIdGenerator,
+        clock: Clock,
     ) -> ChatStreamUseCase:
         return ChatStreamUseCase(
-            chunk_retriever=retriever,
+            work_unit_factory=work_unit_factory,
             embedder=embedder,
             ai_client=ai_client,
-            history_store=store,
             token_budget=token_budget,
             id_generator=id_generator,
+            clock=clock,
         )
 
     list_chat_history = provide(ListChatHistoryUseCase)
@@ -631,11 +670,22 @@ class IngestionAdaptersProvider(Provider):
         return ConfigUploadPolicy(max_bytes=cfg.ingestion_max_upload_size_mb * 1024 * 1024)
 
     @provide(scope=Scope.APP)
-    def image_preprocessor(self, cfg: IngestionSettings) -> ImagePreprocessor:
+    def image_thread_pool(self) -> Iterator[ThreadPoolExecutor]:
+        pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="image-preprocess")
+        try:
+            yield pool
+        finally:
+            pool.shutdown(wait=True)
+
+    @provide(scope=Scope.APP)
+    def image_preprocessor(
+        self, cfg: IngestionSettings, thread_pool: ThreadPoolExecutor
+    ) -> ImagePreprocessor:
         return PillowImagePreprocessor(
             semaphore=asyncio.Semaphore(cfg.ingestion_image_processing_concurrency),
             max_dimension=cfg.ingestion_max_image_dimension,
             jpeg_quality=cfg.ingestion_jpeg_quality,
+            thread_pool=thread_pool,
         )
 
     @provide(scope=Scope.APP)

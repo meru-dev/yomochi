@@ -1,7 +1,6 @@
-import dataclasses
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -39,7 +38,7 @@ class SqlaChatHistoryStore:
                         SELECT id, role, content, chunks_used, created_at
                         FROM chat_turns
                         WHERE user_id = :uid
-                        ORDER BY created_at DESC
+                        ORDER BY created_at DESC, id DESC
                         LIMIT :n
                     """),
                     {"uid": str(user_id.value), "n": n},
@@ -52,18 +51,11 @@ class SqlaChatHistoryStore:
     async def append_turn_pair(
         self, user_id: UserId, user_turn: ChatTurn, assistant_turn: ChatTurn
     ) -> tuple[ChatTurn, ChatTurn]:
-        # Ensure assistant sorts strictly after user under (created_at, id) cursor
-        # comparison; row-tuple comparison ignores microseconds equality only when
-        # ids also tie, so a 1µs bump keeps callers from caring about ordering.
-        if assistant_turn.created_at <= user_turn.created_at:
-            adjusted = dataclasses.replace(
-                assistant_turn,
-                created_at=user_turn.created_at + timedelta(microseconds=1),
-            )
-        else:
-            adjusted = assistant_turn
-        await self.save_turns(user_id, [user_turn, adjusted])
-        return user_turn, adjusted
+        # Persist both turns as-is. Ordering is the use case's responsibility:
+        # it stamps the assistant turn via a later clock.now(), and the monotone
+        # UUID7 ids break any (created_at) ties under the (created_at, id) sort.
+        await self.save_turns(user_id, [user_turn, assistant_turn])
+        return user_turn, assistant_turn
 
     async def save_turns(self, user_id: UserId, turns: list[ChatTurn]) -> None:
         try:
@@ -101,7 +93,7 @@ class SqlaChatHistoryStore:
                     SELECT id, role, content, chunks_used, created_at
                     FROM chat_turns
                     WHERE user_id = :uid
-                      AND (created_at, id::text) < (:cursor_dt, :cursor_id)
+                      AND (created_at, id) < (:cursor_dt, CAST(:cursor_id AS uuid))
                     ORDER BY created_at DESC, id DESC
                     LIMIT :limit
                 """)
