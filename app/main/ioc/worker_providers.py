@@ -120,8 +120,18 @@ class WorkerInfraProvider(Provider):
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
     ) -> AsyncIterator[AsyncSession]:
-        async with factory.begin() as session:
-            yield session
+        # Per-job unit of work. dishka finalizes generator providers via
+        # ``agen.asend(exception)``, so the handler's exception is the *value*
+        # returned by ``yield`` — it is NOT re-raised inside this frame.
+        # ``factory.begin()`` would commit even on a failed job, masking the real
+        # error and persisting partial work. Commit only on success; roll back
+        # otherwise so a failed job leaves no half-written state.
+        async with factory() as session:
+            exception = yield session
+            if exception is None:
+                await session.commit()
+            else:
+                await session.rollback()
 
     @provide(scope=Scope.APP)
     async def openai_gateway(self, cfg: OpenAISettings) -> AsyncIterator[OpenAIGateway]:

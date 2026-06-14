@@ -74,3 +74,4 @@ networkPolicy:
 env:
   LOG_FORMAT: json
   OTEL_ENABLED: "true"
+  COOKIE_SECURE: "true"

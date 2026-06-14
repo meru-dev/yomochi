@@ -93,7 +93,7 @@ app/
 │   │                      # ConfigUploadPolicy, StdoutMailer, NoOpQuotaCheck (worker DI)
 │   ├── persistence_sqla/
 │   │   ├── mappings/      # Imperative ORM mappings with composite(VO, column)
-│   │   ├── alembic/       # Migrations (1 squashed baseline `000000000001_squash.py`
+│   │   ├── alembic/       # Migrations (1 squashed baseline `000000000001_init.py`
 │   │   │                  # outbox.trace_context JSONB column included)
 │   │   ├── constraint_names.py
 │   │   └── registry.py
@@ -452,7 +452,7 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 
 ### 9.6 Audit log
 
-Append-only `audit_events` table partitioned by month. Written via `AuditLog` port from use cases (not middleware) so the row reflects the actual business outcome. Columns: see `app/outbound/persistence_sqla/alembic/versions/000000000001_squash.py` (audit_events table). `user_id` is `ON DELETE SET NULL` — account deletion preserves audit history for compliance.
+Append-only `audit_events` table partitioned by month. Written via `AuditLog` port from use cases (not middleware) so the row reflects the actual business outcome. Columns: see `app/outbound/persistence_sqla/alembic/versions/000000000001_init.py` (audit_events table). `user_id` is `ON DELETE SET NULL` — account deletion preserves audit history for compliance.
 
 ### 9.7 Secrets
 

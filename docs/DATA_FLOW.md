@@ -533,7 +533,6 @@ User chats
 | `audit_events` | Login, transaction CRUD, insight requests (partitioned by month) |
 | `password_reset_tokens` | Short-lived tokens for password reset flow |
 
-**Migration baseline:** Alembic ships a single squashed migration `000000000001_squash.py` (re-squashed 2026-06-12; run `alembic history` for the authoritative record). The squash includes: `outbox_events.trace_context JSONB`, the `(user_id, created_at DESC, id DESC)` keyset index on `insights`, audit_events partitions (current + 3 ahead), FKs `fk_audit_events_user_id_users` and `fk_transactions_category_id_categories`, `uq_users_email_lower` functional index, `outbox_events.id` with no server default (client-side UUIDv7), and `ix_transactions_user_id_created_at` replacing the former single-column `ix_transactions_user_id`. New schema changes append fresh revisions on top of the squash.
 
 ---
 

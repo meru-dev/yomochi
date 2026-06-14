@@ -161,10 +161,33 @@ async def seed(persona: str) -> None:
                     "$13, $14, $15, $16, $17)",
                     rule_rows,
                 )
+
+            # Mark all transaction months dirty so the insight worker picks them up
+            # immediately (seed bypasses the use case layer that normally does this).
+            dirty_rows = list({(tx["date"][:7]) for tx in shifted_txs})
+            dirty_period_rows = [
+                (user_id, int(ym[:4]), int(ym[5:7]), now) for ym in dirty_rows
+            ]
+            await conn.executemany(
+                "INSERT INTO dirty_periods (user_id, year, month, created_at) "
+                "VALUES ($1, $2, $3, $4) "
+                "ON CONFLICT (user_id, year, month) DO NOTHING",
+                dirty_period_rows,
+            )
+
+            # Queue portrait refresh so the portrait worker generates a user_portrait chunk.
+            await conn.execute(
+                "INSERT INTO portrait_queue (user_id, marked_at) "
+                "VALUES ($1, $2) "
+                "ON CONFLICT (user_id) DO UPDATE SET marked_at = EXCLUDED.marked_at",
+                user_id,
+                now,
+            )
     finally:
         await conn.close()
 
     print(f"  Recurring rules: {len(rule_rows)} created.")
+    print(f"  Dirty periods queued: {len(dirty_period_rows)} months.")
     print(f"\nDone. Persona '{persona}' is ready.")
     print(f"  Email:    {email}")
     print(f"  Password: {password}")

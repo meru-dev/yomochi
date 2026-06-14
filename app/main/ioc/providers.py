@@ -235,8 +235,18 @@ class PersistenceProvider(Provider):
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
     ) -> AsyncIterator[AsyncSession]:
-        async with factory.begin() as session:
-            yield session
+        # Request-scoped unit of work. dishka finalizes generator providers via
+        # ``agen.asend(exception)``, so the exception raised by the handler is the
+        # *value* returned by ``yield`` — it is NOT re-raised inside this frame.
+        # ``factory.begin()`` would therefore commit on every request, even failed
+        # ones, masking the real error behind ``InFailedSQLTransactionError`` at
+        # commit time. Commit only on success; roll back otherwise.
+        async with factory() as session:
+            exception = yield session
+            if exception is None:
+                await session.commit()
+            else:
+                await session.rollback()
 
 
 class RequestProvider(Provider):

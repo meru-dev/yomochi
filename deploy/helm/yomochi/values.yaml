@@ -113,6 +113,7 @@ env:
   OTEL_EXPORTER_OTLP_ENDPOINT: ""
   LOG_FORMAT: json
   OTEL_ENABLED: "true"
+  COOKIE_SECURE: ""
 
 # Secrets come from an external secrets manager (Vault, AWS SSM, etc.)
 # Reference them via secretKeyRef in a separate secret.yaml per environment.
