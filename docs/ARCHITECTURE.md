@@ -3,12 +3,12 @@
 ## 1. Architectural principles
 
 1. **Clean Architecture + DDD + Hexagonal.** Dependencies point inward: domain ← application ← inbound / outbound. Naming follows hexagonal direction-of-flow.
-2. **Modular monolith with bounded contexts.** One deployable codebase, six processes. Cross-module communication only via outbox-emitted events or explicitly exported use cases.
+2. **Modular monolith with bounded contexts.** One deployable codebase, four processes. Cross-module communication only via outbox-emitted events or explicitly exported use cases.
 3. **Ports and adapters at every real external dependency.** AI providers, email, future FX behind ports. Repositories also behind ports for testability. Ports are `typing.Protocol`, not ABC.
 4. **Imperative SQLAlchemy mappings with composite value objects.** Domain entities pure Python; mappings in `outbound/persistence_sqla/mappings/` use `composite(ValueObject, column)`.
 5. **Outbox pattern for cross-module integration events.** Postgres transactional outbox → outbox-worker → Kafka → consumers. At-least-once with per-row retry/quarantine. Consumer-side idempotency via Redis.
 6. **Async all the way.** FastAPI async routes, async SQLAlchemy, async Redis, async Kafka via FastStream.
-7. **Bounded concurrency on every external call.** Per-process semaphores around OpenAI and bcrypt. Circuit breaker on every external service. `OpenAIGateway` enforces: `httpx.Limits` TCP cap, `aiolimiter.AsyncLimiter(rpm)` token bucket, `purgatory.AsyncCircuitBreaker` fast-fail, per-endpoint `httpx.Timeout`, SDK retry/backoff with `Retry-After`.
+7. **Bounded concurrency on every external call.** Per-process semaphores around OpenAI and bcrypt. Circuit breaker on every external service. `OpenAIGateway` enforces: `httpx.Limits` TCP cap, **per-endpoint-class `aiolimiter.AsyncLimiter` token buckets** (`chat`/`vision`/`parse` — a vision/parse burst can't starve interactive chat) with a bounded waiter queue (fast-reject on overflow), **per-endpoint `purgatory.AsyncCircuitBreaker`** fast-fail, per-endpoint `httpx.Timeout`, SDK retry/backoff with `Retry-After`.
 8. **Test-driven.** Every domain rule and use case covered by unit tests; every adapter by integration tests with testcontainers.
 9. **Observable from day one.** structlog (JSON in prod) + OpenTelemetry traces + Prometheus metrics + Loki logs.
 
@@ -21,7 +21,7 @@ app/
 │   ├── value_objects/     # Money, Currency, Email, RawPassword, UserPasswordHash,
 │   │                      # IDs, BudgetSummarySnapshot, ParsedReceipt, ReportingPeriod
 │   ├── services/          # MonthlyAggregator, BehavioralShiftDetector,
-│   │                      # AlertThreshold, PortraitAggregator
+│   │                      # AlertThreshold
 │   ├── ports/             # PasswordHasher; per-entity ID generator protocols
 │   │                      # (UserIdGenerator, TransactionIdGenerator, CategoryIdGenerator,
 │   │                      # InsightIdGenerator, SessionIdGenerator,
@@ -36,30 +36,25 @@ app/
 │   │                      # GetBudgetSummary, GetSpendTrend
 │   ├── categories/        # CreateCategory, ListCategories
 │   ├── insights/          # RequestInsight, ProcessInsight, GetInsight, ListInsights
-│   │   ├── embedding_pipeline.py   # Refresh monthly_summary + behavioral_shift chunks
-│   │   ├── portrait_pipeline.py    # Refresh user_portrait chunk (4-month aggregation)
 │   │   ├── use_cases/
 │   │   │   └── _process_insight_steps.py  # TX-bounded steps: claim/assemble/complete/record_failure
-│   │   └── ports/         # AIInsightClient, BudgetSummaryReader, ChunkRetriever,
-│   │                      # ChunkWriter, DirtyPeriodRepository, PortraitQueue,
-│   │                      # TextEmbedder, TransactionReader, AlertWriter, WorkUnit
+│   │   └── ports/         # AIInsightClient, BudgetSummaryReader, TransactionReader,
+│   │                      # AlertWriter, WorkUnit
 │   ├── alerts/            # ListAlerts, MarkAlertRead, ClearAlerts
 │   ├── chat/              # ChatQuery, ChatStream (SSE), ListChatHistory, ClearChatHistory
-│   │   ├── _retrieval.py  # Shared RAG retrieval helper (portrait + monthly + shift chunks)
-│   │   └── ports/         # ChatAIClient, ChatHistoryStore, ChatTokenBudget
+│   │   └── ports/         # ChatAIClient, ChatHistoryStore, ChatTokenBudget, ChatTools
 │   ├── search/            # SearchTransactions
 │   ├── recurring/         # CreateRecurringRule, UpdateRecurringRule, DeleteRecurringRule,
 │   │                      # GetRecurringRule, ListRecurringRules, FireDueRules
 │   ├── ingestion/         # ParseReceipt (receipt OCR, no media retained)
 │   └── common/
-│       ├── context_quality.py      # assess_quality(chunks) → FULL | PARTIAL | NONE (shared by chat + insights)
 │       ├── ai_errors.py            # AITimeoutError, AIUnavailableError, AIInvalidRequestError
 │       ├── cursor.py               # base64 keyset cursor helpers
 │       ├── outbox_event.py         # OutboxEvent value object
 │       ├── exceptions.py           # Cross-cutting application errors
 │       └── ports/         # Flusher, IdentityContext, OutboxRepository, EventPublisher,
-│                          # TextEmbedder, Clock, MetricsRecorder, UserPlanLookup,
-│                          # ChunkRetriever, QuotaCheck, ConsumerIdempotencyStore
+│                          # Clock, MetricsRecorder, UserPlanLookup,
+│                          # QuotaCheck, ConsumerIdempotencyStore
 │                          # (request-level Idempotency-Key cache lives in the HTTP
 │                          # middleware, not here; TX scope = session_factory.begin(),
 │                          # no TransactionManager port)
@@ -73,28 +68,27 @@ app/
 │   │   ├── middleware/    # RequestId, RateLimit, Idempotency, HttpMetrics, SecurityHeaders
 │   │   └── errors/        # Error-envelope translators
 │   └── messaging/         # FastStream Kafka consumers
-│       ├── transaction_consumer.py  # Marks dirty_periods on TransactionCreated/Updated/Deleted
 │       └── insight_consumer.py      # Runs insight pipeline on InsightRequested
 │
 ├── outbound/              # Adapters this app calls OUT to.
 │   ├── adapters/
 │   │   ├── sqla/          # Repository implementations per bounded context
 │   │   ├── redis/         # Sessions, consumer idempotency,
-│   │   │                  # rate limiter, search cache, chat token budget,
-│   │   │                  # CachedTextEmbedder (decorator, 24h TTL, SHA-256 key)
+│   │   │                  # rate limiter, search cache, chat token budget
 │   │   ├── kafka/         # KafkaEventPublisher (FastStream producer)
-│   │   ├── openai/        # OpenAIInsightClient, OpenAITextEmbedder,
-│   │   │                  # OpenAIChatClient, OpenAITransactionTextParser,
-│   │   │                  # OpenAIReceiptExtractor, EmbeddingBatcher,
+│   │   ├── openai/        # OpenAIInsightClient, OpenAIChatClient,
+│   │   │                  # OpenAITransactionTextParser, OpenAIReceiptExtractor,
 │   │   │                  # pricing.py (per-model $ cost catalog for cost telemetry)
-│   │   │   └── _gateway/  # OpenAIGateway: rate limit + circuit breaker + timeout
+│   │   │   └── _gateway/  # OpenAIGateway: per-endpoint rate-limit buckets + breaker + timeout
+│   │   ├── insight_fallback/ # FallbackAIInsightClient + DeterministicInsightClient (F2)
 │   │   ├── image/         # Pillow-based image preprocessor (ingestion)
 │   │   └── system/        # SystemClock, Uuid7IdGenerator, BcryptPasswordHasher,
 │   │                      # ConfigUploadPolicy, StdoutMailer, NoOpQuotaCheck (worker DI)
 │   ├── persistence_sqla/
 │   │   ├── mappings/      # Imperative ORM mappings with composite(VO, column)
-│   │   ├── alembic/       # Migrations (1 squashed baseline `000000000001_init.py`
-│   │   │                  # outbox.trace_context JSONB column included)
+│   │   ├── alembic/       # Migrations: `000000000001_init.py` (squashed baseline)
+│   │   │                  # `000000000002_drop_vector_store.py` (drops user_financial_chunks,
+│   │   │                  # dirty_periods, portrait_queue + vector extension)
 │   │   ├── constraint_names.py
 │   │   └── registry.py
 │   ├── persistence_redis/ # Reserved namespace (currently empty — Redis adapters live
@@ -118,17 +112,10 @@ app/
     │   └── asgi.py        # uvicorn entry: app.main.api.asgi:app
     ├── outbox/
     │   └── main.py        # Polls outbox_events, publishes to Kafka
-    ├── transaction/
-    │   └── main.py        # FastStream consumer: TransactionCreated → dirty_periods
     ├── insight/
-    │   ├── main.py        # FastStream consumer: InsightRequested → pipeline
-    │   │                  # + background embedding refresh loop (30s)
-    │   └── refresh_tick.py
-    ├── portrait/
-    │   ├── main.py        # Background portrait refresh loop (60s). No Kafka.
-    │   └── refresh_tick.py
+    │   └── main.py        # FastStream consumer: InsightRequested → deterministic pipeline
     └── scheduler/
-        └── main.py        # APScheduler: 7 scheduled jobs (see §4)
+        └── main.py        # APScheduler: 6 scheduled jobs (see §4)
 ```
 
 ## 3. Bounded contexts
@@ -136,12 +123,12 @@ app/
 | Context | Owns | Talks to |
 |---|---|---|
 | `users` | `User`, auth sessions, password reset, audit log | — |
-| `transactions` | `Transaction`, `Category`, multi-currency invariants, `BudgetSummary` + `SpendTrend` read models | publishes `TransactionCreated`, `TransactionUpdated`, `TransactionDeleted` |
+| `transactions` | `Transaction`, `Category`, multi-currency invariants, `BudgetSummary` + `SpendTrend` read models | no outbox events emitted for transactions |
 | `categories` | `Category` hierarchy (system + user), assignability rules | — |
-| `insights` | `Insight`, RAG chunk store, embedding pipelines, dirty_periods, `BehavioralShiftDetector`, `PortraitPipeline` | consumes `TransactionCreated/Updated/Deleted` (mark dirty_periods); publishes `InsightRequested`, `InsightCompleted` |
-| `alerts` | `Alert`, 90-day retention purge | written by embedding pipeline when behavioural shifts detected |
-| `chat` | `ChatTurn`, chat history, streaming AI client, token budget | reads chunk store (portrait + monthly + shift chunks) |
-| `search` | semantic search index, query parser | reads from transactions and chunk store |
+| `insights` | `Insight`, deterministic aggregator, `BehavioralShiftDetector` | publishes `InsightRequested`, `InsightCompleted` |
+| `alerts` | `Alert`, 90-day retention purge | written by `detect_shift_alerts_job` (scheduler) |
+| `chat` | `ChatTurn`, chat history, streaming AI client, token budget, `ChatTools` | reads from `transactions` via function-calling tools |
+| `search` | pg_trgm fuzzy search, query parser | reads from `transactions` |
 | `recurring` | `RecurringRule` state machine | scheduler-worker fires due rules → creates `Transaction`s |
 | `ingestion` | `ParsedReceiptDraft`, receipt extractor + image preprocessor | one-shot pre-step in front of `POST /v1/transactions`; no media retained |
 
@@ -158,67 +145,46 @@ Cross-context communication happens through outbox-emitted events. No direct imp
        ▼                       ▼                    ▼
   ┌─────────┐            ┌──────────┐          ┌──────────┐
   │ Postgres│            │  Redis   │          │  Kafka   │
-  │+pgvector│            │ sessions │          │  (KRaft) │
+  │+pg_trgm │            │ sessions │          │  (KRaft) │
   └────┬────┘            │  idemp.  │          └────┬─────┘
        │                 │  ratelim │               │
        │                 │  ratelim │      ┌────────┴──────────┐
        │                 │  cache   │      │                   │
-       │                 └──────────┘      ▼                   ▼
-       │                            yomochi.             yomochi.
-       │                            transactions.v1      insights.v1
-       │                                 │                    │
-       │   ┌──────────────┐              │                    │
-       └───┤ outbox-worker├──────────────┴────────────────────┘
-           │ (relay to    │              (publishes to Kafka)
+       │                 └──────────┘      ▼
+       │                            yomochi.insights.v1
+       │                                        │
+       │   ┌──────────────┐                    │
+       └───┤ outbox-worker├────────────────────┘
+           │ (relay to    │   (publishes to Kafka)
            │  Kafka)      │
            └──────────────┘
-
-  ┌────────────────────────────────────┐
-  │ transaction-worker (FastStream)    │
-  │ topic: yomochi.transactions.v1     │
-  │ → mark dirty_periods(user,yr,mo)   │
-  │ No OpenAI. No embedding.           │
-  └────────────────────────────────────┘
 
   ┌────────────────────────────────────────────────────────────┐
   │ insight-worker (FastStream)                                 │
   │ topic: yomochi.insights.v1                                  │
   │ on_insight_event:                                           │
-  │   EmbeddingPipeline.refresh() → pgvector RAG → OpenAI chat │
-  │   → Insight COMPLETED                                       │
-  │ background loop (every 30s):                                │
-  │   pop dirty_periods → EmbeddingPipeline.refresh()           │
-  │   → monthly_summary + behavioral_shift chunks in pgvector   │
-  └────────────────────────────────────────────────────────────┘
-
-  ┌────────────────────────────────────────────────────────────┐
-  │ portrait-worker (background only, no Kafka)                 │
-  │ loop (every 60s):                                           │
-  │   pop portrait_queue → PortraitPipeline.refresh(user_id)   │
-  │   → 4-month aggregation → embed → user_portrait chunk       │
-  │ On error: requeue user_id (no data loss)                    │
+  │   read month aggregate + prior 3 months (deterministic)    │
+  │   MonthlyAggregator + BehavioralShiftDetector               │
+  │   → OpenAI gpt-4o structured output → Insight COMPLETED     │
   └────────────────────────────────────────────────────────────┘
 
   ┌────────────────────────────────────────────────────────────┐
   │ scheduler-worker (APScheduler, UTC)                         │
   │ • 00:05 daily:      FireDueRulesUseCase (recurring txns)    │
   │ • 00:30 monthly:    manage_audit_partitions (create+drop)   │
-  │ • 01:00 monthly:    mark all users' prev month → dirty      │
+  │ • 02:00 daily:      detect_shift_alerts_job (BehavioralShiftDetector per user) │
   │ • 03:30 Sunday:     purge alerts older than 90 days         │
-  │ • 03:00 Monday:     mark_all_dirty on portrait_queue        │
   │ • 04:00 daily:      purge SENT outbox rows > 7 days         │
   │ • every 10 min:     reaper_tick (requeue orphaned insights)  │
   └────────────────────────────────────────────────────────────┘
 ```
 
-**Six processes in V1:**
+**Four processes in V1:**
 
-1. **api** — FastAPI HTTP. All user-facing requests. Reads/writes Postgres, publishes outbox events for cross-context facts. Also marks `dirty_periods` synchronously on transaction create/update/delete (in the same DB transaction).
+1. **api** — FastAPI HTTP. All user-facing requests. Reads/writes Postgres, publishes outbox events for cross-context facts.
 2. **outbox-worker** — Polls `outbox_events` with per-row `FOR UPDATE SKIP LOCKED`. Publishes to Kafka. On publish failure: retries up to `max_retries`, then quarantines the row as `FAILED` (status + `last_error` + `failed_at`). Successful rows in the same batch are unaffected.
-3. **transaction-worker** — FastStream Kafka consumer on `yomochi.transactions.v1`. Marks `dirty_periods(user_id, year, month)`. No OpenAI dependency. Idempotent via Redis consumer store.
-4. **insight-worker** — FastStream Kafka consumer on `yomochi.insights.v1`. On `InsightRequested`: runs `EmbeddingPipeline.refresh()` → pgvector RAG retrieval → OpenAI chat → `Insight COMPLETED`. Early-fails with `FAILED` status if context_quality = NONE. Background loop (30s): `pop_dirty(limit=20)` → `EmbeddingPipeline.refresh()` per dirty period. Pre-warms chunks between insight requests.
-5. **portrait-worker** — Background-only loop (60s). `pop_dirty(limit=10)` from `portrait_queue` → `PortraitPipeline.refresh(user_id)`: reads last 4 months of transactions → aggregates → embeds → upserts `user_portrait` chunk. On per-user error: requeues the user_id. Sized independently from insight-worker so long insight jobs cannot delay portrait refresh.
-6. **scheduler-worker** — APScheduler with seven scheduled jobs (see topology diagram above). No Dishka; directly instantiates adapters. `SELECT FOR UPDATE SKIP LOCKED` + unique constraints make multiple replicas safe. `reaper_tick` runs every 10 min: requeues orphaned-`PROCESSING` insights (lease expired, `retry_count < max_retries`) via outbox re-emit; marks exhausted ones `FAILED`. `manage_audit_partitions_job` runs monthly (00:30 UTC) and at startup to pre-create upcoming partitions and detach+drop those older than 12 months. `purge_sent_outbox_job` runs daily (04:00 UTC), batch-deleting SENT outbox rows older than 7 days.
+3. **insight-worker** — FastStream Kafka consumer on `yomochi.insights.v1`. On `InsightRequested`: reads period's month aggregate and prior 3 months via `BudgetSummaryReader`, runs `MonthlyAggregator` + `BehavioralShiftDetector`, formats deterministic context, calls OpenAI gpt-4o structured output → `Insight COMPLETED`. Early-fails with `FAILED` status if context_quality = NONE (no transaction rows for the period).
+4. **scheduler-worker** — APScheduler with six scheduled jobs (see topology diagram above). No Dishka; directly instantiates adapters. `SELECT FOR UPDATE SKIP LOCKED` + unique constraints make multiple replicas safe. `detect_shift_alerts_job` runs daily (02:00 UTC): for each recently-active user, reads monthly aggregates via `BudgetSummaryReader`, runs `BehavioralShiftDetector`, and writes alerts idempotently. `reaper_tick` runs every 10 min: requeues orphaned-`PROCESSING` insights (lease expired, `retry_count < max_retries`) via outbox re-emit; marks exhausted ones `FAILED`. `manage_audit_partitions_job` runs monthly (00:30 UTC) and at startup to pre-create upcoming partitions and detach+drop those older than 12 months. `purge_sent_outbox_job` runs daily (04:00 UTC), batch-deleting SENT outbox rows older than 7 days.
 
 No object storage. Uploaded receipts (ingestion) are extracted and discarded — only the extracted JSON survives.
 
@@ -229,6 +195,31 @@ No object storage. Uploaded receipts (ingestion) are extracted and discarded —
 - **One Redis instance.** Session loss = forced re-login. Idempotency cache loss = some retries may proceed twice. Acceptable.
 - **One replica of each worker.** Crash causes queue lag until restart.
 
+### 4.1 Delivery guarantees (per consumer)
+
+Every Kafka consumer is **at-least-once**: a message is committed only after the
+handler succeeds, so a crash or handler exception causes redelivery. Handlers
+must therefore be **idempotent**. The end-to-end chain is at-least-once on both
+hops — outbox-worker re-publishes un-acked rows, and consumers re-process
+un-committed messages.
+
+**insight-worker** (`yomochi.insights.v1`, group `insight-worker`,
+`app/inbound/messaging/insight_consumer.py`):
+
+| Concern | Mechanism |
+|---|---|
+| Ack semantics | `ack_policy=AckPolicy.NACK_ON_ERROR` (`app/main/insight/main.py`). Commit on success; on handler exception, seek back → redelivery. |
+| Idempotency | Redis key `consumer:idempotency:{event_id}` (`RedisConsumerIdempotencyStore`). `is_processed` short-circuits duplicates before any work; `mark_processed` (TTL `consumer_idempotency_ttl_seconds`, default 24 h) is set on success **and** on DLQ park. |
+| Bounded redelivery | Redis counter `consumer:failures:{event_id}` (`INCR`+`EXPIRE`). Each failed attempt increments it; the handler `raise`s (→ NACK → redelivery) while `failures < consumer_max_retries` (default 3). |
+| Terminal park (DLQ) | On the `consumer_max_retries`-th failure the original body + `x_error` is published to the DLQ topic (`KAFKA_TOPIC_DLQ`, default `yomochi.dlq.v1`), the event is marked processed, `consumer_dlq_event` metric is recorded, and the handler returns (no further redelivery). |
+| Already-terminal events | `InsightAlreadyTerminalError` / `InsightNotFoundError` (re-delivery of a durably-done insight) are treated as success — marked processed, never DLQ'd. |
+
+Because the DLQ park sets the idempotency key, **a naïve replay of a parked event
+is skipped as a duplicate** until that key's TTL expires. Replaying therefore
+requires clearing the Redis idempotency/failure keys first — see the
+DLQ drain/replay runbook (§10.5). The guarantee is covered by
+the kill-test `tests/integration/messaging/test_insight_dlq.py`.
+
 ## 5. Key data flows
 
 ### 5.1 Manual transaction creation
@@ -238,32 +229,12 @@ POST /v1/transactions
   1. api: validate Pydantic body → domain Money + Category lookup
   2. api: in one DB transaction:
        - INSERT into transactions
-       - UPSERT dirty_periods (user_id, year, month)  ← synchronous, same TX
-       - INSERT into outbox_events: "TransactionCreated"
        - INSERT into audit_events
   3. api: cache response in Redis (Idempotency-Key, 24h)
   4. api: respond 201 with TransactionResponse
-
-Async tail (within seconds):
-  5. outbox-worker → publishes "TransactionCreated" to Kafka
-  6. transaction-worker (on_transaction_event):
-       a. check consumer idempotency (Redis)
-       b. UPSERT dirty_periods (user_id, year, month)  ← secondary path for
-          events from other future sources; idempotent with step 2
-
-Background pre-warm (within 30s):
-  7. insight-worker background loop:
-       a. pop_dirty(limit=20)
-       b. EmbeddingPipeline.refresh(user_id, year, month):
-            - read transactions for period from DB
-            - aggregate → format_monthly_summary text
-            - detect behavioral shifts vs prior 3 months
-            - embed text → OpenAI text-embedding-3-small → vector[1536]
-            - UPSERT user_financial_chunks (monthly_summary, behavioral_shift)
-            - if shifts detected → INSERT user_alerts (idempotent)
 ```
 
-`Idempotency-Key` header on POST guards against double-submits. `dirty_periods` has a unique constraint on `(user_id, year, month)` — a burst of 30 transactions in a month marks dirty once, triggers one refresh. `EmbeddingPipeline` computes `semantic_hash` of aggregated data; upsert skips re-embedding if hash unchanged.
+`Idempotency-Key` header on POST guards against double-submits. There is no async Kafka path for transaction events.
 
 ### 5.2 Insight generation
 
@@ -275,85 +246,93 @@ Background pre-warm (within 30s):
 3. outbox-worker → Kafka → insight-worker
 4. insight-worker (on_insight_event):
    a. mark Insight PROCESSING
-   b. EmbeddingPipeline.refresh() for period (idempotent; no-op if chunks fresh)
-   c. embed query text → pgvector cosine search → top-3 monthly_summary + top-2 behavioral_shift
-   d. ChunkRetriever.get_portrait(user_id) → prepend portrait chunk if present
-   e. assess ContextQuality:
-        FULL    = has monthly_summary AND behavioral_shift chunks
-        PARTIAL = has one of the two
-        NONE    = no chunks found → mark Insight FAILED, stop
-   f. call OpenAI gpt-4o structured output → {title, description, impact_score}
-   g. read BudgetSummarySnapshot (income/expense totals per currency)
-   h. mark Insight COMPLETED (title, description, impact_score, context_quality, budget_summary)
-5. Browser polls GET /v1/insights/{id} every 2s until status = COMPLETED | FAILED
+   b. BudgetSummaryReader.read_month(user_id, year, month) → current month aggregate
+      BudgetSummaryReader.read_history_months(user_id, year, month, n=3) → prior 3 months
+   c. MonthlyAggregator.aggregate() per month → MonthlyAggregation[]
+   d. BehavioralShiftDetector.detect(current, history) → shifts (if any)
+   e. assess ContextQuality (deterministic, no vector search):
+        NONE    = no transaction rows for the period → mark Insight FAILED, stop
+                  (AI is never called without user data)
+        FULL    = rows present AND behavioral shifts detected
+        PARTIAL = rows present AND no shifts detected
+   f. format deterministic context:
+        monthly_summary_text  (from MonthlyAggregator)
+        behavioral_shift_text (from BehavioralShiftDetector, if shifts present)
+   g. AIInsightClient.generate → OpenAI gpt-4o structured output → {title, description, impact_score}
+      (system: financial analyst persona; context: monthly summary + shift text).
+      Wrapped by FallbackAIInsightClient (F2): on any OpenAI gateway failure
+      (rate-limit / timeout / 5xx / breaker OPEN) it degrades to a vendor-free
+      deterministic templated summary instead of failing the insight.
+   h. read BudgetSummarySnapshot (income/expense totals per currency)
+   i. mark Insight COMPLETED (title, description, impact_score, context_quality, budget_summary)
+5. Browser receives the result via SSE (F4): GET /v1/insights/{id}/stream pushes status
+   transitions + the terminal COMPLETED/FAILED payload the instant it lands (then closes;
+   ~2-min timeout sentinel). A low-frequency GET /v1/insights/{id} poll remains as a backstop
+   when SSE is unavailable. (Generation is out-of-band in the worker, so the stream watches
+   the row, not the LLM tokens.)
 ```
 
 ### 5.3 Chat (non-streaming and SSE streaming)
+
+Chat answers a question by running a bounded OpenAI function-calling loop over a typed
+`ChatTools` query library — there is no embedding / pgvector retrieval on the chat path.
 
 ```
 POST /v1/chat          → ChatQueryUseCase (returns full answer)
 POST /v1/chat/stream   → ChatStreamUseCase (SSE, streams tokens)
 
-Both use the same retrieval path:
-  1. Embed user message → query_vector[1536]
-  2. ChunkRetriever.search(user_id, query_vector,
-         monthly_top_k=2, shift_top_k=2)
-  3. ChunkRetriever.get_portrait(user_id) → prepend if present
-     → portrait + 2 monthly + 2 shift = up to 5 chunks
-  4. assess_quality → FULL | PARTIAL | NONE
-  5. ChatHistoryStore.last_n(user_id, n=5) → last 5 turns (chronological)
-  6. ChatAIClient.chat(request):
+Both use the same tools loop:
+  1. ChatHistoryStore.last_n(user_id, n=5) → last 5 turns (chronological)
+  2. ChatAIClient.chat_with_tools / stream_with_tools:
        model: gpt-4o-mini, temperature=0.4, max_tokens=800
-       system: financial assistant + chunks as context
+       system: financial assistant that fetches data via tools
        history: last 5 turns
        user: current message
-  7. Save 2 ChatTurns: user turn stamped with first clock.now(), assistant turn
+       tools: the typed ChatTools schemas (bounded iteration cap)
+  3. Save 2 ChatTurns: user turn stamped with first clock.now(), assistant turn
      with a second clock.now(); ordering relies on monotone UUIDv7 id tie-break
      (ORDER BY created_at DESC, id DESC). No +1µs arithmetic.
-  8. Return {turn_id, answer, context_quality, created_at}
+  4. Return {turn_id, answer, context_quality, created_at}
+     context_quality is always FULL (the field is retained for response-contract
+     stability; chat no longer has a partial/none retrieval state).
 
 Token budget: Redis-backed ChatTokenBudget enforces per-user per-period cap.
 On client disconnect (SSE cut before the usage sentinel arrives), ChatStreamUseCase
-records an estimated spend via estimate_tokens (chars // 4 + 1) and logs
+records an estimated spend via estimate_tokens_from_text (chars // 4 + 1) and logs
 chat_stream_usage_estimated, so consumed capacity is never silently skipped.
 ```
 
-### 5.4 Portrait refresh
+Six user-scoped tools are available: `get_month_summary`, `get_category_trend`,
+`get_spend_window`, `get_user_profile`, `search_transactions`, and `list_categories`.
+`search_transactions` performs a fuzzy text match backed by the existing pg_trgm GIN
+indexes on `transactions.merchant` and `transactions.notes` — no vector search. The loop
+has a bounded iteration cap to prevent run-away tool calls. Tool results are treated as
+untrusted data (OWASP LLM01 treatment). `ChatTools` opens a fresh short-lived DB session
+per tool call and releases it before the next OpenAI round-trip, preserving the §10.4
+connection-release invariant — no DB connection is held across OpenAI calls.
+
+### 5.4 Behavioral-shift alert detection (scheduler)
 
 ```
-Weekly (Monday 03:00 UTC), scheduler marks all users dirty in portrait_queue.
-portrait-worker loop (every 60s):
-  1. pop_dirty(limit=10) from portrait_queue (FOR UPDATE SKIP LOCKED)
-  2. for each user_id:
-       PortraitPipeline.refresh(user_id):
-         a. BudgetSummaryReader.read_history_months(user_id, n=4)
-         b. aggregate() per month → MonthlyAggregation[]
-         c. PortraitAggregator.format_portrait_text(recent, baselines)
-            → spending patterns, income trends, category dynamics
-         d. compute_semantic_hash(all_aggs)
-         e. TextEmbedder.embed(portrait_text) → vector[1536]
-         f. ChunkWriter.upsert(chunk_type="user_portrait",
-                period_year=0, period_month=0,  ← one per user
-                content=portrait_text, embedding=vector)
-  3. On per-user error: requeue → portrait_queue (no data loss)
+Daily, 02:00 UTC — detect_shift_alerts_job (scheduler-worker):
+  for each recently-active user:
+    1. BudgetSummaryReader.read_month(user_id, year, month) → current aggregate
+    2. BudgetSummaryReader.read_history_months(user_id, year, month, n=3) → prior 3 months
+    3. BehavioralShiftDetector.detect(current, history) → shifts (if any)
+    4. AlertWriter.write_shift_alerts(user_id, year, month, shifts)
+           └── For each shift where alert_threshold.is_alertworthy():
+               INSERT INTO user_alerts (type, subtype, title, body, ...)
+               ON CONFLICT (user_id, subtype, period_year, period_month)
+               DO NOTHING  ← idempotent
 ```
 
-### 5.5 Monthly embedding pre-warm (scheduler)
-
-```
-1st of month, 01:00 UTC:
-  scheduler-worker: SELECT all user_ids → UPSERT dirty_periods (user_id, prev_year, prev_month)
-  → insight-worker background loop picks up within 30s
-  → EmbeddingPipeline.refresh() for each user's previous month
-  → chunks ready before users request insights
-```
-
-### 5.6 Search
+### 5.5 Search
 
 ```
 1. Browser POST /v1/search {query: "how much on cafes in April"}
 2. api: LLM query parser (gpt-4o-mini) → {category: "food", period_start: 2026-04-01, …}
-3. api: embed query → pgvector search on transaction chunks, filtered by user_id + period
+3. api: SearchTransactions use case — pg_trgm fuzzy match on merchant/notes,
+        filtered by user_id, category, period
 4. api: returns ranked transactions (Redis cache for repeated identical queries)
 ```
 
@@ -368,9 +347,7 @@ Single Dishka container with two scopes:
 
 - `providers.py` — `HttpProviders`: FastAPI process (full provider set).
 - `worker_providers.py` — modular provider sets composed per process:
-  - `WorkerInfraProvider` + `WorkerAdaptersBaseProvider` + `WorkerAdaptersInsightProvider` + `InsightPersistenceProvider` + `InsightUseCasesProvider` → insight-worker
-  - `WorkerInfraProvider` + `WorkerAdaptersBaseProvider` + `TransactionPersistenceProvider` → transaction-worker
-  - `WorkerInfraProvider` + `PortraitAdaptersProvider` → portrait-worker
+  - `WorkerInfraProvider` + `WorkerAdaptersBaseProvider` + `WorkerAdaptersInsightProvider` + `InsightPersistenceProvider` + `InsightUseCasesProvider` → insight-worker (handles the Kafka insight consumer)
 
 scheduler-worker does not use Dishka; directly instantiates adapters (no DI overhead for a simple cron process).
 
@@ -382,15 +359,15 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 | Quota | Per-user per-period limits via `QuotaCheck` port. API process wires `SqlaQuotaCheck` (counts from source tables via half-open `created_at` range predicates, backed by `ix_transactions_user_id_created_at`; atomic with the work-TX — no Redis compensating-refund). Workers wire `NoOpQuotaCheck`. Used by `RequestInsight` and `CreateTransaction`. Limits read from `Plan` value object. |
 | Idempotency | `Idempotency-Key` header on every non-idempotent POST; Redis-stored response cache for 24h. Key includes `user_id` to prevent cross-user replay. Distributed `SET NX` lock eliminates TOCTOU race on concurrent duplicate requests. |
 | Rate limiting | Redis sliding-window middleware. Per-user, per-endpoint. Chat enforces per-user 20/min in its controller via pipelined Redis `INCR`+`EXPIRE` (closes race that could lock the user out on crash). |
-| AI concurrency control | `OpenAIGateway`: `httpx.Limits` TCP cap, `aiolimiter.AsyncLimiter(rpm)` token bucket, `purgatory.AsyncCircuitBreaker` fast-fail, per-endpoint `httpx.Timeout`, SDK retry/backoff. Bounded thread pool for bcrypt (work factor 12, pool size 8). |
-| Soft vs hard AI dependency | `OpenAITransactionTextParser` (parse-text) and `OpenAIReceiptExtractor` (ingestion) are **soft** dependencies: on breaker OPEN or failure, frontend leaves form blank. `OpenAIInsightClient` is a **hard** dependency: failures propagate as `INSIGHT_FAILED`. |
-| Outbox reliability | Per-row transaction scope in poller. On publish failure: retry up to `max_retries`, then quarantine as `FAILED` (status + `last_error` + `failed_at`). Kafka consumers send unprocessable messages to DLQ topic. |
+| AI concurrency control | `OpenAIGateway`: `httpx.Limits` TCP cap; **per-endpoint-class token buckets** (`aiolimiter.AsyncLimiter` for `chat`/`vision`/`parse`, partitioning the account RPM so one class can't starve another) with a **bounded waiter queue** (`openai_limiter_max_queue` → fast-reject `AIRateLimitedError` + `openai_limiter_rejected_total` on overflow, no unbounded pile-up); **per-endpoint `purgatory.AsyncCircuitBreaker`** fast-fail; per-endpoint `httpx.Timeout`; SDK retry/backoff. Bounded thread pool for bcrypt (work factor 12, pool size 8). (F19) |
+| Prompt caching (F1) | OpenAI prompt-caching exploited: stable system prefix first, volatile data last; `prompt_cache_key=user_id` pins a user's requests to the same backend so their prefix stays hot. `openai_cached_tokens_total{endpoint,model}` tracks cache hits; `estimate_cost` discounts cached tokens to 50% so `openai_cost_usd_total` reflects real spend. |
+| Soft vs hard AI dependency | `OpenAITransactionTextParser` (parse-text) and `OpenAIReceiptExtractor` (ingestion) are **soft** dependencies: on breaker OPEN or failure, frontend leaves form blank. `OpenAIInsightClient` (insights) is wrapped by **`FallbackAIInsightClient`** (F2): on any gateway failure (rate-limit / timeout / 5xx / breaker OPEN) it **degrades to a vendor-free deterministic templated summary** (`DeterministicInsightClient`) instead of failing the insight — `insight_fallback_total{reason}`. Only an unexpected non-gateway error still lands in the DLQ. (Real second-vendor failover = Anthropic is deferred → F32.) |
+| Outbox reliability | Per-row transaction scope in poller. On publish failure: retry up to `max_retries`, then quarantine as `FAILED` (status + `last_error` + `failed_at`). **FAILED is replayable, not terminal** (F17): a dedicated `OutboxAdmin` port (`SqlaOutboxAdmin`, segregated from the append-only request-path `OutboxRepository`) + the `scripts/replay_outbox.py` admin CLI flip FAILED→PENDING (retry_count reset) with filters / min-age backoff / dry-run — see the outbox-replay runbook (§10.6). Kafka consumers send unprocessable messages to a DLQ topic (DLQ-replay runbook §10.5). |
 | Audit log | `audit_events` table populated by domain events. Partitioned by month via Postgres native partitioning. `user_id` nullable with `ON DELETE SET NULL` — account deletion preserves audit history. |
-| Vector chunks | `user_financial_chunks` hash-partitioned by `user_id` (16 partitions). HNSW index per partition. Chunk types: `monthly_summary` (one per user·month), `behavioral_shift` (one per user·month when shifts detected), `user_portrait` (one per user, `period_year=0, period_month=0`). |
-| Embedding refresh dedup | `dirty_periods` unique constraint on `(user_id, year, month)` — burst marks dirty once. `EmbeddingPipeline` computes `semantic_hash`; upsert skips re-embedding if hash unchanged. N transactions in a month → at most one embedding API call per refresh cycle. |
-| Insight quality guard | `ProcessInsightUseCase` classifies context as FULL/PARTIAL/NONE after RAG retrieval. NONE → `Insight.mark_failed()`. AI is never called without user data. |
-| AI error classification | `ai_errors.py` defines `AITimeoutError` / `AIUnavailableError` (transient — reaper requeues) vs `AIInvalidRequestError` (terminal — mark failed). Classification is at the `OpenAIGateway` / client layer; use cases never catch raw `httpx` or SDK errors. |
-| Chat token budget | `ChatTokenBudget` (Redis) caps total tokens consumed per user per billing period. Enforced in `ChatStreamUseCase` via `StreamUsage` callback. On client disconnect (usage sentinel never arrives), an estimate_tokens fallback (chars // 4 + 1) records an estimated spend so capacity is never silently skipped; logs `chat_stream_usage_estimated`. |
+| Insight quality guard | `ProcessInsightUseCase` classifies context quality deterministically, without vector search: NONE = no transaction rows for the period (AI never called, insight marked FAILED); FULL = rows present and behavioral shifts detected; PARTIAL = rows present and no shifts. AI is never called without user data. |
+| AI error classification | `ai_errors.py` defines `AITimeoutError` / `AIUnavailableError` (transient) vs `AIInvalidRequestError`, all under base `OpenAICallError`. On the **insight** path these are caught by `FallbackAIInsightClient` (F2) → deterministic fallback, so the insight still completes (degraded) rather than failing. The **reaper** still requeues insights orphaned in `PROCESSING` by a worker *crash* (lease expiry), which is a separate concern from AI errors. Classification is at the `OpenAIGateway` / client layer; use cases never catch raw `httpx` or SDK errors. |
+| Chat token budget | `ChatTokenBudget` (Redis) caps total tokens consumed per user per billing period. Enforced in `ChatStreamUseCase` via `StreamUsage` callback. On client disconnect (usage sentinel never arrives), an estimate_tokens_from_text fallback (chars // 4 + 1) records an estimated spend so capacity is never silently skipped; logs `chat_stream_usage_estimated`. |
+| Chat retrieval | Chat is tools-only: a bounded OpenAI function-calling loop over the `ChatTools` query library (`search_transactions` uses pg_trgm GIN indexes — no pgvector on the chat path). Tool results are treated as untrusted data (OWASP LLM01 treatment). `ChatTools` opens a fresh short-lived DB session per tool call to preserve the §10.4 connection-release invariant. |
 | Errors | Single error envelope: `{error: {code, message, details, request_id}}`. |
 | Pagination | Cursor-based for lists; cursor = base64(`(created_at, id)`). |
 | Per-user isolation | `user_id` column on every tenant-scoped table. Repositories receive `user_id` from `IdentityContext`. Authorization checked at use-case boundary. |
@@ -405,10 +382,10 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 | HTTP | FastAPI |
 | ORM | SQLAlchemy 2 async + imperative mappings + Alembic |
 | DI | Dishka |
-| DB | Postgres 17 + pgvector |
-| Cache / sessions / idempotency / rate limit / token budget / cached embedder | Redis 7 |
+| DB | Postgres 17 + pg_trgm |
+| Cache / sessions / idempotency / rate limit / token budget | Redis 7 |
 | Message bus | Kafka via FastStream |
-| AI | OpenAI: `gpt-4o` (insights structured output), `gpt-4o-mini` (chat + parse-text), `text-embedding-3-small` (all embeddings). Upgrade via env var. |
+| AI | OpenAI: `gpt-4o` (insights structured output), `gpt-4o-mini` (chat function-calling + parse-text + receipt vision). Upgrade via env var. |
 | Object storage | None. Uploaded receipts extracted and discarded. |
 | Frontend | Next.js 15 + React 19 + shadcn/ui + TanStack Query |
 | Observability | OpenTelemetry + Prometheus + Grafana + Loki + Tempo |
@@ -447,7 +424,7 @@ scheduler-worker does not use Dishka; directly instantiates adapters (no DI over
 
 - **Receipt vision**: OpenAI structured-output (`client.beta.chat.completions.parse` with Pydantic schema) — the model cannot emit free-form text that gets re-injected.
 - **Transaction-text parser**: user-controlled categories fenced inside `<CATEGORIES>` / `<TRANSACTION_INPUT>` tags in the user-role message (not interpolated into the system prompt).
-- **Chat RAG**: retrieved chunks placed in a `user`-role message inside `<FINANCIAL_DATA>` tags; system prompt explicitly tells the model to treat tag contents as raw data. Chat history `role` whitelisted against `{user, assistant}` on replay.
+- **Chat tools**: tool results returned from the function-calling loop are treated as untrusted data (OWASP LLM01) — the system prompt instructs the model to treat tool result content as raw data, not as instructions. Chat history `role` whitelisted against `{user, assistant}` on replay.
 - **Output heuristic**: assistant answers scanned for `ignore prior instructions`, `you are now`, `<system>` markers and logged silently (no client-visible signal).
 
 ### 9.6 Audit log
@@ -472,21 +449,17 @@ Never logged: raw or hashed passwords (`RawPassword` has `repr=False`), full JWT
 |---|---|---|
 | `api` | `app.main.api.asgi:app` (uvicorn) | FastAPI HTTP, full Dishka provider set |
 | `outbox-worker` | `python -m app.main.outbox.main` | Polls `outbox_events` → Kafka. `SELECT FOR UPDATE SKIP LOCKED`, per-row TX, retry/quarantine |
-| `transaction-worker` | `python -m app.main.transaction.main` | FastStream consumer on `yomochi.transactions.v1`. No OpenAI dependency |
-| `insight-worker` | `python -m app.main.insight.main` | FastStream consumer on `yomochi.insights.v1` + 30s dirty-period embedding refresh loop (per-period TX, concurrent via `Semaphore(4)`). Claims insight with `processing_deadline = now() + 15 min` (lease). |
-| `portrait-worker` | `python -m app.main.portrait.main` | 60s portrait refresh loop, concurrent via `Semaphore(3)`. No Kafka |
-| `scheduler-worker` | `python -m app.main.scheduler.main` | APScheduler — 7 scheduled jobs (see §4). No Dishka |
+| `insight-worker` | `python -m app.main.insight.main` | FastStream consumer on `yomochi.insights.v1`. Claims insight with `processing_deadline = now() + 15 min` (lease). |
+| `scheduler-worker` | `python -m app.main.scheduler.main` | APScheduler — 6 scheduled jobs (see §4). No Dishka |
 
-Same Docker image, different `command:` per Helm Deployment (childprofile pattern). All Kafka consumers + outbox/portrait support horizontal scaling (Kafka rebalance / `SKIP LOCKED`).
+Same Docker image, different `command:` per Helm Deployment (childprofile pattern). All Kafka consumers + outbox support horizontal scaling (Kafka rebalance / `SKIP LOCKED`).
 
 ### 10.2 Resource limits (Helm requests)
 
 | Worker | CPU | Memory | Notes |
 |---|---|---|---|
 | `outbox-worker` | 0.25 | 256M | Lightweight DB poll + Kafka publish |
-| `transaction-worker` | 0.25 | 192M | No OpenAI, no embedding |
-| `insight-worker` | 0.5 | 384M | Heaviest — chat + embedding |
-| `portrait-worker` | 0.25 | 256M | Embedding only |
+| `insight-worker` | 0.5 | 448M | Heaviest — insight gen (structured OpenAI output) |
 | `scheduler-worker` | 0.25 | 256M | Idle 99% of the time |
 
 ### 10.3 Failure modes runbook
@@ -495,14 +468,78 @@ Same Docker image, different `command:` per Helm Deployment (childprofile patter
 |---|---|---|
 | Insights stuck at QUEUED | outbox-worker not running | restart outbox-worker |
 | Insights stuck at PROCESSING | insight-worker crashed mid-pipeline | reaper_tick auto-requeues when `processing_deadline` expires (≤15 min); exhausted rows (≥`reaper_max_retries`) flip to FAILED automatically |
-| High Kafka lag on `yomochi.transactions.v1` | transaction-worker slow | scale replicas |
-| High Kafka lag on `yomochi.insights.v1` | OpenAI degraded or slow | check rate-limit headers + breaker state |
-| `dirty_periods` growing | refresh loop stuck or OpenAI down | restart insight-worker |
-| Portraits stale | portrait-worker crashed | restart portrait-worker |
+| Outbox rows stranded as FAILED | Kafka/broker outage longer than `max_retries × poll_interval` quarantined them | after the broker recovers, replay via `scripts/replay_outbox.py` — see the outbox-replay runbook (§10.6) |
+| High Kafka lag on `yomochi.insights.v1` | OpenAI degraded or slow | check rate-limit headers + breaker state. Note: insights still complete (degraded deterministic summary, F2) rather than failing while OpenAI is down |
+| Behavioral-shift alerts not generated | scheduler-worker not running or crashed | restart scheduler-worker; check `detect_shift_alerts_job` logs |
 
 ### 10.4 Connection pool
 
-Explicit pool config: `pool_size=10, max_overflow=5, recycle=1800s`. Two hot paths explicitly release DB connections before long-running external calls: `ProcessInsightUseCase` (claim TX → no-TX OpenAI calls → save TX), and `ChatQueryUseCase` / `ChatStreamUseCase` (TX1 short read via `ChatWorkUnitFactory` — context + history fetched and committed → embedder + LLM call with no session held → TX2 fresh short write to persist turns).
+Explicit pool config: `pool_size=10, max_overflow=5, recycle=1800s`. Hot paths explicitly release DB connections before long-running external calls: `ProcessInsightUseCase` (claim TX → no-TX OpenAI calls → save TX), and `ChatQueryUseCase` / `ChatStreamUseCase` (TX1 short read — history fetched and committed → LLM call with no session held → TX2 fresh short write to persist turns). `ChatTools` opens a fresh short session per tool call (via the APP-scoped session factory) so no connection is held across the OpenAI tool-selection round-trips.
+
+### 10.5 Runbook — DLQ drain & replay (insight-worker)
+
+A message lands in the DLQ topic (`KAFKA_TOPIC_DLQ`, default `yomochi.dlq.v1`) after
+the handler fails it `CONSUMER_MAX_RETRIES` (default 3) times; the DLQ body is the
+original event + an injected `x_error`. Signal: `consumer_dlq_event` /
+`consumer_dlq_events_total{topic}` climbing. See §4.1 for the delivery semantics;
+kill-test `tests/integration/messaging/test_insight_dlq.py`.
+
+**Inspect** (read without consuming; `$BROKERS` e.g. `localhost:9092`):
+
+```bash
+kcat -b "$BROKERS" -t yomochi.dlq.v1 -C -o beginning -e -q   # or kafka-console-consumer.sh
+```
+
+Per message decide **discard** (bad data — leave it; documents itself via `x_error`)
+or **replay** (transient cause now fixed — broker outage, downstream 5xx, deploy bug).
+
+**Replay — clear the Redis idempotency keys FIRST (critical).** Parking an event sets
+its idempotency key, so republishing the same `event_id` is **skipped as a duplicate**
+until the key's 24 h TTL expires. Delete both keys per replayed `event_id`:
+
+```bash
+# REDIS=host:port, EVENT_ID=the event's event_id
+redis-cli -h "${REDIS%:*}" -p "${REDIS#*:}" DEL \
+  "consumer:idempotency:${EVENT_ID}" "consumer:failures:${EVENT_ID}"
+```
+
+Then republish to the main topic, stripped of `x_error`:
+
+```bash
+kcat -b "$BROKERS" -t yomochi.dlq.v1 -C -o beginning -c1 -e -q \
+  | jq -c 'del(.x_error)' | kcat -b "$BROKERS" -t yomochi.insights.v1 -P
+```
+
+Verify: `process_insight` succeeds / the insight reaches `COMPLETED`; `consumer_dlq_event`
+stops climbing. If it re-parks, the cause is **not** transient — fix forward, don't loop replays.
+
+### 10.6 Runbook — outbox FAILED replay
+
+The outbox-worker quarantines a row as `FAILED` after `max_retries` (default 5) publish
+failures (`status=FAILED` + `last_error` + `failed_at`; `outbox_relay_total{status="quarantined"}`).
+A broker outage longer than `max_retries × poll_interval` strands every in-flight event there.
+
+Inspect: `SELECT id, event_type, retry_count, failed_at, left(last_error,200) FROM outbox_events
+WHERE status='FAILED' ORDER BY failed_at;`. Replay (after the downstream is healthy) flips
+selected rows back to PENDING (`retry_count` reset) so the poller re-drives them — no worker
+restart needed. Always `--dry-run` first:
+
+```bash
+DATABASE_URL=… uv run python -m scripts.replay_outbox --all --dry-run
+DATABASE_URL=… uv run python -m scripts.replay_outbox --all --min-age-minutes 10 --limit 200
+```
+
+| Flag | Effect |
+|---|---|
+| `--id <uuid>` (repeatable) / `--event-type <t>` / `--all` | selector — at least one required (refuses otherwise) |
+| `--min-age-minutes N` | only rows whose `failed_at` is older than N min (backoff for a recovering downstream) |
+| `--limit N` | cap, oldest-failure-first |
+| `--dry-run` | list only, no write |
+
+Selection uses `FOR UPDATE SKIP LOCKED` (safe while the poller runs). Verify the FAILED count
+drops and those rows reach `SENT`. If a row re-quarantines immediately, the cause is not
+transient — fix forward. (Port `OutboxAdmin` / `SqlaOutboxAdmin`; integration test
+`tests/integration/outbox/test_outbox_replay.py`.)
 
 ## 11. Out-of-scope architectural choices
 
@@ -511,7 +548,8 @@ Explicit pool config: `pool_size=10, max_overflow=5, recycle=1800s`. Two hot pat
 - WebSocket — chat streaming uses SSE. Push notifications deferred.
 - Read replicas, sharding, Citus — deferred. Single Postgres handles current scale.
 - Saga / Event Sourcing / standalone CQRS — outbox + state machines suffice.
-- Local AI — deferred (memory: `project_p4a_deferred.md`). OpenAI on hot path; Ollama/local embedder behind same ports later.
+- Local AI — deferred (memory: `project_p4a_deferred.md`). OpenAI on hot path; Ollama/local embedder would be reintroduced via new ports if/when local AI lands.
 - Per-transaction embedding chunks — rejected. Monthly aggregation is sufficient granularity.
+- Vector store / pgvector / RAG — **removed**. `user_financial_chunks`, `dirty_periods`, `portrait_queue`, the embedding refresh loop, the portrait pipeline, and all related ports (`TextEmbedder`, `ChunkRetriever`, `ChunkWriter`, `DirtyPeriodRepository`, `PortraitQueue`) were deleted. Migration `000000000002_drop_vector_store` drops the tables and the `vector` extension. The `pg_trgm` extension (used by `search_transactions`) is retained.
 - Celery — rejected. Incompatible with async SQLAlchemy.
 - Arq migration — **CANCELLED** (memory: `project_v3_arq_migration.md`). Arq stays in maintenance-only evaluation; APScheduler retained for V1. K8s `CronJob` per schedule is the migration path considered for V2 (see `features.md` F8).

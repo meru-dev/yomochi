@@ -18,11 +18,9 @@ api:
     requests: { cpu: 200m, memory: 256Mi }
     limits:   { cpu: 800m, memory: 512Mi }
 
-outboxWorker:      { replicaCount: 1 }
-transactionWorker: { replicaCount: 1 }
-insightWorker:     { replicaCount: 1 }
-portraitWorker:    { replicaCount: 1 }
-schedulerWorker:   { replicaCount: 1 }
+outboxWorker:    { replicaCount: 1 }
+insightWorker:   { replicaCount: 1 }
+schedulerWorker: { replicaCount: 1 }
 
 web:
   replicaCount: 1

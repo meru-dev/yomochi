@@ -15,7 +15,9 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 _FIXTURES_DIR = Path(__file__).parent
-_WINDOW_DAYS = 90
+# 4-month window: the behavioral-shift detector compares the current month
+# against the prior 3, so the demo keeps 4 months of history.
+_WINDOW_DAYS = 120
 
 PERSONAS = ["meiko_tokyo"]
 
@@ -66,8 +68,6 @@ _MERCHANT_MAP: dict[str, str] = {
     # groceries
     "seiyu": CAT_GROCERIES,
     "aeon": CAT_GROCERIES,
-    "пятёрочка": CAT_GROCERIES,
-    "pyaterochka": CAT_GROCERIES,
     "supermarket": CAT_GROCERIES,
     # rent
     "landlord": CAT_RENT,
@@ -87,10 +87,9 @@ _MERCHANT_MAP: dict[str, str] = {
     "ratp": CAT_PUBLIC_TRANSIT,
     "navigo": CAT_PUBLIC_TRANSIT,
     # taxi
-    "яндекс.такси": CAT_TAXI,
-    "yandex": CAT_TAXI,
     "uber": CAT_TAXI,
     "grab": CAT_TAXI,
+    "nihon kotsu": CAT_TAXI,
     # fitness
     "sports club": CAT_FITNESS,
     "gym": CAT_FITNESS,

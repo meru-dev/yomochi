@@ -21,15 +21,16 @@ def _make_breakers() -> dict:
     breaker.__aexit__ = AsyncMock(return_value=False)
     breaker.context = MagicMock()
     breaker.context.state = "closed"
-    return {"chat": breaker, "embeddings": breaker, "vision": breaker}
+    return {"chat": breaker, "vision": breaker, "parse": breaker}
 
 
 def _make_gateway(limiter: AsyncLimiter | None = None) -> OpenAIGateway:
     mock_client = MagicMock()
     mock_client.with_options = MagicMock(return_value=mock_client)
+    lim = limiter or AsyncLimiter(max_rate=1000, time_period=60)
     return OpenAIGateway(
         client=mock_client,
-        limiter=limiter or AsyncLimiter(max_rate=1000, time_period=60),
+        limiters={"chat": lim, "vision": lim, "parse": lim},
         breakers=_make_breakers(),
         default_read_timeout_seconds=5.0,
     )
@@ -71,7 +72,7 @@ async def test_gauge_decremented_even_on_acquire_cancellation() -> None:
         patch.object(gw_module, "openai_limiter_waiting", gauge_mock),
         patch.object(gw_module, "openai_call_total"),
         patch.object(gw_module, "openai_call_duration_seconds"),
-        patch.object(type(gateway._limiter), "acquire", raising_acquire),
+        patch.object(type(gateway._limiters["chat"]), "acquire", raising_acquire),
         pytest.raises(asyncio.CancelledError),
     ):
         await gateway.call(endpoint="chat", fn=AsyncMock(return_value="ok"))
@@ -96,7 +97,7 @@ async def test_gauge_decremented_on_fn_error() -> None:
         pytest.raises(OpenAICallError),
     ):
         await gateway.call(
-            endpoint="embeddings",
+            endpoint="vision",
             fn=AsyncMock(side_effect=RuntimeError("boom")),
         )
 
@@ -117,9 +118,9 @@ async def test_gauge_label_matches_endpoint() -> None:
         patch.object(gw_module, "openai_call_total"),
         patch.object(gw_module, "openai_call_duration_seconds"),
     ):
-        await gateway.call(endpoint="embeddings", fn=AsyncMock(return_value=[]))
+        await gateway.call(endpoint="vision", fn=AsyncMock(return_value=[]))
 
-    gauge_mock.labels.assert_called_with(endpoint="embeddings")
+    gauge_mock.labels.assert_called_with(endpoint="vision")
 
 
 async def test_stream_gauge_decremented_even_on_acquire_cancellation() -> None:
@@ -137,7 +138,7 @@ async def test_stream_gauge_decremented_even_on_acquire_cancellation() -> None:
     with (
         patch.object(gw_module, "openai_limiter_waiting", gauge_mock),
         patch.object(gw_module, "openai_call_total"),
-        patch.object(type(gateway._limiter), "acquire", raising_acquire),
+        patch.object(type(gateway._limiters["chat"]), "acquire", raising_acquire),
         pytest.raises(asyncio.CancelledError),
     ):
         # stream_call is an async generator; must be consumed to run body

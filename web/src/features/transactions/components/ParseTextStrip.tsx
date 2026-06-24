@@ -35,7 +35,7 @@ export function ParseTextStrip({ setValue, onFillChange }: Props) {
       } catch {
         // soft-fail
       }
-    }, 700)
+    }, 1200)
     return () => clearTimeout(t)
   }, [aiInput]) // eslint-disable-line react-hooks/exhaustive-deps
 

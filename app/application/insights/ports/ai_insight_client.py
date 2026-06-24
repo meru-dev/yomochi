@@ -2,7 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.application.insights.ports.chunk_retriever import RetrievedChunk
+from app.application.insights.ports.insight_context import InsightContextChunk
 from app.domain.value_objects.enums import Period
 
 
@@ -11,8 +11,12 @@ class InsightRequest:
     period: Period
     period_year: int
     period_month: int
-    chunks: list[RetrievedChunk]
+    chunks: list[InsightContextChunk]
     user_question: str | None = None
+    # Stable per-user key the AI adapter MAY use for provider-side cache routing
+    # (F1) — provider-neutral; the OpenAI adapter maps it to prompt_cache_key.
+    # None = no routing hint.
+    cache_key: str | None = None
 
 
 @dataclass(frozen=True)

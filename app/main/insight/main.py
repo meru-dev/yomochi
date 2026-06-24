@@ -12,14 +12,12 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.application.common.ports.consumer_idempotency_store import ConsumerIdempotencyStore
 from app.application.common.ports.event_publisher import EventPublisher
 from app.application.common.ports.metrics_recorder import MetricsRecorder
-from app.application.common.ports.text_embedder import TextEmbedder
 from app.application.insights.use_cases.process_insight import ProcessInsightUseCase
-from app.domain.services.behavioral_shift_detector import BehavioralShiftDetector
 from app.inbound.messaging.insight_consumer import handle_insight_event
 from app.main.config.loader import (
     load_database_settings,
@@ -35,7 +33,6 @@ from app.main.config.settings import (
     OpenAISettings,
     RedisSettings,
 )
-from app.main.insight.refresh_tick import refresh_one_dirty_period
 from app.main.ioc.worker_providers import (
     InsightPersistenceProvider,
     InsightUseCasesProvider,
@@ -52,48 +49,6 @@ logger = structlog.get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 
 _CONSUMER_GROUP = "insight-worker"
-_REFRESH_INTERVAL_SECONDS = 30
-_REFRESH_BATCH_SIZE = 20
-_REFRESH_CONCURRENCY = 4  # concurrent OpenAI embedding calls per tick
-
-
-async def _refresh_one_period_safe(
-    session_factory: async_sessionmaker[AsyncSession],
-    embedder: TextEmbedder,
-    detector: BehavioralShiftDetector,
-    sem: asyncio.Semaphore,
-) -> bool:
-    async with sem:
-        try:
-            return await refresh_one_dirty_period(session_factory, embedder, detector)
-        except Exception:
-            logger.exception("embedding_refresh_period_error")
-            return False
-
-
-async def _embedding_refresh_loop(
-    session_factory: async_sessionmaker[AsyncSession],
-    embedder: TextEmbedder,
-    detector: BehavioralShiftDetector,
-) -> None:
-    sem = asyncio.Semaphore(_REFRESH_CONCURRENCY)
-    while True:
-        await asyncio.sleep(_REFRESH_INTERVAL_SECONDS)
-        results = await asyncio.gather(
-            *[
-                _refresh_one_period_safe(session_factory, embedder, detector, sem)
-                for _ in range(_REFRESH_BATCH_SIZE)
-            ],
-            return_exceptions=True,
-        )
-        # The per-task wrapper catches Exception; this guards BaseException /
-        # cancellation leaks that gather would otherwise discard silently.
-        for r in results:
-            if isinstance(r, BaseException):
-                logger.error("embedding_refresh_task_error", exc_info=r)
-        processed = sum(1 for r in results if r is True)
-        if processed:
-            logger.info("embedding_refresh_tick", processed=processed)
 
 
 def make_app(
@@ -179,28 +134,14 @@ def make_app(
     app = FastStream(broker)
     setup_dishka(container, app, auto_inject=True)
 
-    background_tasks: set[asyncio.Task[None]] = set()
-
     @app.on_startup
-    async def _start_refresh_loop() -> None:
+    async def _instrument_engine() -> None:
+        # The insight worker runs only the Kafka `process_insight` consumer — no
+        # background refresh loops remain. Startup only wires SQLAlchemy tracing
+        # when OTel is enabled.
         if obs_cfg.otel_enabled:
             engine = await container.get(AsyncEngine)
             SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
-        sf = await container.get(async_sessionmaker[AsyncSession])
-        emb = await container.get(TextEmbedder)
-        det = await container.get(BehavioralShiftDetector)
-        task = asyncio.create_task(
-            _embedding_refresh_loop(sf, emb, det), name="embedding-refresh-loop"
-        )
-        background_tasks.add(task)
-        task.add_done_callback(background_tasks.discard)
-
-    @app.on_shutdown
-    async def _stop_background_tasks() -> None:
-        for task in list(background_tasks):
-            task.cancel()
-        if background_tasks:
-            await asyncio.gather(*background_tasks, return_exceptions=True)
 
     return app
 

@@ -57,9 +57,6 @@ async def run(
     publisher: EventPublisher = KafkaEventPublisher(broker=broker)
 
     topic_map = {
-        "TransactionCreated": kafka_settings.kafka_topic_transactions,
-        "TransactionUpdated": kafka_settings.kafka_topic_transactions,
-        "TransactionDeleted": kafka_settings.kafka_topic_transactions,
         "InsightRequested": kafka_settings.kafka_topic_insights,
         "InsightCompleted": kafka_settings.kafka_topic_insights,
     }

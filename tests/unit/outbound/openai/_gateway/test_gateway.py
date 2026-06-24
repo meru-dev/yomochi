@@ -24,19 +24,23 @@ def _client_with_options_passthrough() -> MagicMock:
     return client
 
 
+_ENDPOINTS = ("chat", "vision", "parse")
+
+
+def _limiters() -> dict:
+    return {ep: AsyncLimiter(max_rate=100, time_period=60) for ep in _ENDPOINTS}
+
+
 async def _new_breakers(threshold: int = 5, ttl: int = 60) -> dict:
     factory = purgatory.AsyncCircuitBreakerFactory(default_threshold=threshold, default_ttl=ttl)
-    return {
-        endpoint: await factory.get_breaker(f"test_{endpoint}")
-        for endpoint in ("chat", "embeddings", "vision")
-    }
+    return {endpoint: await factory.get_breaker(f"test_{endpoint}") for endpoint in _ENDPOINTS}
 
 
 async def test_call_returns_fn_result_on_success() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=10.0,
     )
@@ -53,13 +57,13 @@ async def test_call_applies_per_call_timeout_to_client() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=10.0,
     )
 
     fn = AsyncMock(return_value="x")
-    await gateway.call(endpoint="embeddings", fn=fn, timeout=3.0)
+    await gateway.call(endpoint="vision", fn=fn, timeout=3.0)
 
     # with_options called at init (default timeout) + once for explicit timeout
     calls = list(client.with_options.call_args_list)
@@ -71,7 +75,7 @@ async def test_call_falls_back_to_default_timeout() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=42.0,
     )
@@ -101,7 +105,7 @@ async def test_call_translates_sdk_exceptions(
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=10.0,
     )
@@ -120,7 +124,7 @@ async def test_call_translates_rate_limit_error() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=10.0,
     )
@@ -138,7 +142,7 @@ async def test_call_translates_bad_request_to_invalid() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=await _new_breakers(),
         default_read_timeout_seconds=10.0,
     )
@@ -152,7 +156,7 @@ async def test_circuit_breaker_opens_after_threshold_failures() -> None:
     client = _client_with_options_passthrough()
     gateway = OpenAIGateway(
         client=client,
-        limiter=AsyncLimiter(max_rate=100, time_period=60),
+        limiters=_limiters(),
         breakers=breakers,
         default_read_timeout_seconds=10.0,
     )

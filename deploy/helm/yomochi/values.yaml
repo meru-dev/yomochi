@@ -25,35 +25,15 @@ outboxWorker:
       cpu: 500m
       memory: 256Mi
 
-transactionWorker:
-  replicaCount: 1
-  resources:
-    requests:
-      cpu: 50m
-      memory: 96Mi
-    limits:
-      cpu: 200m
-      memory: 192Mi
-
 insightWorker:
   replicaCount: 1
   resources:
     requests:
       cpu: 100m
-      memory: 192Mi
+      memory: 256Mi
     limits:
       cpu: 500m
-      memory: 384Mi
-
-portraitWorker:
-  replicaCount: 1
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 250m
-      memory: 256Mi
+      memory: 448Mi
 
 schedulerWorker:
   replicaCount: 1
@@ -141,7 +121,6 @@ postgresql:
 kafka:
   bootstrapServers: "kafka:9092"
   topics:
-    transactions: "yomochi.transactions.v1"
     insights: "yomochi.insights.v1"
     dlq: "yomochi.dlq.v1"
   partitions: 3

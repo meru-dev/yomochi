@@ -43,7 +43,7 @@ spec:
     - Egress
   egress:
     {{- include "yomochi.commonEgressRules" . | nindent 4 }}
-{{- range $component := list "outbox-worker" "transaction-worker" "insight-worker" "portrait-worker" "scheduler-worker" }}
+{{- range $component := list "outbox-worker" "insight-worker" "scheduler-worker" }}
 ---
 # --- {{ $component }}: deny all ingress ---
 apiVersion: networking.k8s.io/v1

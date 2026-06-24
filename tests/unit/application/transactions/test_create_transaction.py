@@ -24,12 +24,6 @@ def _user_id() -> UserId:
     return UserId(uuid.uuid4())
 
 
-def _make_dirty_marker() -> AsyncMock:
-    m = AsyncMock()
-    m.mark_dirty = AsyncMock()
-    return m
-
-
 def _make_use_case() -> tuple[
     CreateTransactionUseCase, FakeTransactionRepository, FakeOutboxRepository
 ]:
@@ -45,12 +39,10 @@ def _make_use_case() -> tuple[
 
     uc = CreateTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
         id_generator=FakeTransactionIdGenerator(),
         user_plan_lookup=user_plan_lookup,
         category_list_reader=FakeCategoryListReader(),
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
-        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
         audit_log=FakeAuditLog(),
     )
     return uc, repo, outbox
@@ -83,9 +75,8 @@ async def test_creates_expense() -> None:
     assert tx.merchant == "Coffee Shop"
     assert tx.notes is None
     assert tx.category_id is None
-    assert len(outbox.events) == 1
-    assert outbox.events[0].event_type == "TransactionCreated"
-    assert outbox.events[0].user_id == user_id.value
+    # No transaction outbox events emitted.
+    assert len(outbox.events) == 0
 
 
 async def test_creates_income() -> None:
@@ -176,7 +167,6 @@ async def test_raises_when_category_is_group() -> None:
     reader.seed([CategoryListItem(id_=group_id, name="Food & Drink", parent_id=None)])
 
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
     user_plan_lookup = MagicMock()
     user_plan_lookup.get_plan = AsyncMock(return_value=Plan.FREE)
 
@@ -186,12 +176,10 @@ async def test_raises_when_category_is_group() -> None:
 
     uc = CreateTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
         id_generator=FakeTransactionIdGenerator(),
         user_plan_lookup=user_plan_lookup,
         category_list_reader=reader,
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
-        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
         audit_log=FakeAuditLog(),
     )
     user_id = _user_id()
@@ -227,7 +215,6 @@ async def test_leaf_category_accepted() -> None:
     )
 
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
     user_plan_lookup = MagicMock()
     user_plan_lookup.get_plan = AsyncMock(return_value=Plan.FREE)
 
@@ -237,12 +224,10 @@ async def test_leaf_category_accepted() -> None:
 
     uc = CreateTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
         id_generator=FakeTransactionIdGenerator(),
         user_plan_lookup=user_plan_lookup,
         category_list_reader=reader,
         quota_check=_NoOpQuotaCheck2(),  # type: ignore[arg-type]
-        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
         audit_log=FakeAuditLog(),
     )
     user_id = _user_id()
@@ -259,3 +244,21 @@ async def test_leaf_category_accepted() -> None:
     )
 
     assert result.transaction_id is not None
+
+
+async def test_create_emits_no_outbox_event() -> None:
+    """Creating a transaction emits no outbox event (no async fan-out work)."""
+    uc, _, outbox = _make_use_case()
+    user_id = _user_id()
+
+    await uc(
+        CreateTransactionCommand(
+            user_id=user_id,
+            raw_amount="10.00",
+            currency="USD",
+            date_=date(2026, 3, 15),
+            type_="expense",
+        )
+    )
+
+    assert len(outbox.events) == 0

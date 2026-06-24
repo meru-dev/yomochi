@@ -248,20 +248,6 @@ services:
       kafka: {condition: service_healthy}
     networks: [data_net, obs_net]
 
-  transaction-worker:
-    <<: *worker
-    command: ["python", "-m", "app.main.transaction.main"]
-    depends_on:
-      postgres: {condition: service_healthy}
-      redis: {condition: service_healthy}
-      kafka: {condition: service_healthy}
-    networks: [data_net, obs_net]
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 192M
-
   insight-worker:
     <<: *worker
     command: ["python", "-m", "app.main.insight.main"]
@@ -274,19 +260,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 384M
-
-  portrait-worker:
-    <<: *worker
-    command: ["python", "-m", "app.main.portrait.main"]
-    depends_on:
-      postgres: {condition: service_healthy}
-    networks: [data_net, obs_net]
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
+          memory: 448M
 
   scheduler-worker:
     <<: [*worker, *worker-resources]

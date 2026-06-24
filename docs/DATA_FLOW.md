@@ -27,29 +27,25 @@
      ▼
 ┌──────────────────┬──────────────┬──────────────────────────────┐
 │  PostgreSQL 17   │  Redis 7     │  Kafka (KRaft)               │
-│  + pgvector      │              │                              │
+│  + pg_trgm       │              │                              │
 └──────────────────┴──────────────┴──────────────┬─────────────-┘
                                                   │
            ┌──────────────────────────────────────┴──────────────┐
            │                                                      │
-           ▼ yomochi.transactions.v1              ▼ yomochi.insights.v1
-  ┌────────────────────┐                 ┌─────────────────────────────┐
-  │  transaction-worker│                 │  insight-worker              │
-  │  (FastStream)      │                 │  (FastStream)                │
-  │  mark dirty_periods│                 │  run insight pipeline        │
-  │  No OpenAI.        │                 │  + embedding refresh (30s)   │
-  └────────────────────┘                 └─────────────────────────────┘
-
-  ┌───────────────────────────────────┐
-  │  portrait-worker (background)     │
-  │  No Kafka. Refresh 60s.           │
-  │  portrait_queue → 4-month chunks  │
-  └───────────────────────────────────┘
+                                        ▼ yomochi.insights.v1
+                                ┌─────────────────────────────────┐
+                                │  insight-worker (FastStream)     │
+                                │  run insight pipeline            │
+                                │   (deterministic SQL)            │
+                                └─────────────────────────────────┘
+   (transaction-worker + yomochi.transactions.v1 removed)
 
   ┌───────────────────────────────────┐
   │  outbox-worker                    │
   │  Polls outbox_events → Kafka      │
   │  Per-row TX + retry/quarantine    │
+  │  FAILED rows replayable (F17:     │
+  │  scripts/replay_outbox.py)        │
   └───────────────────────────────────┘
 ```
 
@@ -75,164 +71,55 @@ CreateTransactionUseCase
   │       └── INSERT INTO transactions (id, user_id, amount, currency,
   │               category_id, date, type, description, ...)
   │
-  ├── DirtyPeriodMarker.mark_dirty(user_id, year, month)
-  │       └── INSERT INTO dirty_periods (user_id, year, month)
-  │           ON CONFLICT DO NOTHING        ← idempotent, same DB TX
-  │
-  ├── OutboxRepository.append(TransactionCreated)
-  │       └── INSERT INTO outbox_events (event_type="TransactionCreated",
-  │               payload={user_id, transaction_id, date, ...},
-  │               trace_context={traceparent, tracestate},  ← W3C carrier
-  │               status=PENDING)
-  │
   ├── AuditLog.append(TransactionCreated audit event)
   │
   └── Flusher.flush() → COMMIT
 ```
 
-**Outbox relay** (outbox-worker, polling loop):
-```
-OutboxPoller.run_once()
-  ├── Snapshot PENDING row IDs (no lock held during publish)
-  └── For each row_id:
-      ├── Re-lock row (FOR UPDATE SKIP LOCKED)
-      ├── Extract trace_context JSONB → attach via TraceContextTextMapPropagator
-      │       as parent span context (handles NULL / garbage / empty safely)
-      ├── Open INTERNAL span `outbox.publish` under resumed parent
-      ├── Kafka.publish(topic="yomochi.transactions.v1", key=user_id.bytes)
-      │       → KafkaTelemetryMiddleware adds PRODUCER span + injects traceparent
-      │         header so the consumer resumes the same trace
-      ├── UPDATE outbox_events SET status=SENT
-      └── On failure:
-          ├── retry_count < max_retries → bump retry_count + last_error
-          └── retry_count ≥ max_retries → SET status=FAILED, failed_at=now()
-```
-
-**Outbox ordering guarantee:** Per-row retry (each row processed in its own TX, failed rows retried independently) means a later event can be published before an earlier one if the earlier row is retrying. Per-user event ordering is **not guaranteed** across retries. Consumers must be idempotent and commutative — the existing design satisfies this: `DirtyPeriodMarker` uses `ON CONFLICT DO NOTHING`, `ConsumerIdempotencyStore` deduplicates by `event_id` (best-effort check-then-set, not exclusive), and embedding/alert writes are hash-gated upserts. Do not add consumers that depend on strict arrival order.
-
-**Transaction consumer** (transaction-worker, Kafka):
-```
-Topic: yomochi.transactions.v1
-on_transaction_event(body)
-  ├── ConsumerIdempotencyStore.is_processed(event_id) → skip if already seen
-  ├── DirtyPeriodRepository.mark_dirty(user_id, year, month)
-  │       ← secondary path; primary mark happens in api TX above.
-  │         Needed for future external transaction sources.
-  └── store.mark_processed(event_id, ttl=...)
-      On error: publish to DLQ topic
-```
+**No transaction outbox/Kafka path.** Transactions do not emit outbox events;
+the `transaction-worker` process and the `yomochi.transactions.v1` topic were
+removed. The outbox relay and Kafka carry **insight** events
+(`yomochi.insights.v1`) — see §4.
 
 ---
 
-## 2. Embedding refresh (insight-worker background loop)
+## 2. Behavioral-shift alert detection (scheduler)
 
-insight-worker background loop runs **every 30 seconds**:
-
-```
-_embedding_refresh_loop
-  │
-  ├── SqlaDirtyPeriodRepository.pop_dirty(limit=20)
-  │       └── DELETE FROM dirty_periods
-  │           WHERE (user_id, year, month) IN (
-  │               SELECT ... FOR UPDATE SKIP LOCKED LIMIT 20
-  │           ) RETURNING *
-  │
-  └── for each DirtyPeriod:
-        EmbeddingPipeline.refresh(user_id, year, month)
-          │
-          ├── BudgetSummaryReader.read_month(user_id, year, month)
-          │       └── SELECT transactions JOIN categories
-          │           GROUP BY currency, type, category
-          │
-          ├── BudgetSummaryReader.read_history_months(user_id, year, month, n=3)
-          │       └── same, for 3 previous months
-          │
-          ├── MonthlyAggregator.aggregate() → MonthlyAggregation per currency
-          │       (total income, total expense, savings rate,
-          │        top categories, day-of-month distribution)
-          │
-          ├── _write_monthly_chunk()
-          │       ├── format_monthly_summary(agg) → natural language text
-          │       ├── compute_semantic_hash(agg)
-          │       ├── TextEmbedder.embed(text) → vector[1536]  (OpenAI)
-          │       └── ChunkWriter.upsert(chunk_type="monthly_summary")
-          │               └── INSERT INTO user_financial_chunks
-          │                   ON CONFLICT (user_id, chunk_type, period_year, period_month)
-          │                   DO UPDATE WHERE semantic_hash != EXCLUDED.semantic_hash
-          │                   (no-op if data unchanged)
-          │
-          └── _write_shift_chunk()
-                  ├── BehavioralShiftDetector.detect(current, history)
-                  │       Compares current month vs prior 3 months:
-                  │       • expense_spike:    expenses rose >15% / >30%
-                  │       • income_drop:      income fell >10% / >20%
-                  │       • savings_collapse: savings rate < 15%
-                  │       • savings_decline:  savings rate dropped >8%
-                  │       • category_spike:   anomalous category growth
-                  │
-                  ├── If shifts found:
-                  │       ├── format_shift_text() → natural language
-                  │       ├── TextEmbedder.embed() → vector[1536]
-                  │       ├── ChunkWriter.upsert(chunk_type="behavioral_shift")
-                  │       └── AlertWriter.write_shift_alerts(user_id, shifts)
-                  │               └── For each shift where alert_threshold.is_alertworthy():
-                  │                   INSERT INTO user_alerts
-                  │                   ON CONFLICT (user_id, type, currency,
-                  │                               period_year, period_month)
-                  │                   DO NOTHING  ← idempotent
-                  │
-                  └── If no shifts → nothing written for shift chunk
-```
-
-**Dedup guarantee:** `dirty_periods` has unique constraint on `(user_id, year, month)` — a burst of N transactions marks dirty once, triggers one refresh cycle. `semantic_hash` check inside `EmbeddingPipeline` means the upsert is a no-op if the aggregate is unchanged.
-
----
-
-## 3. Portrait refresh (portrait-worker background loop)
-
-Portrait = aggregated behavioral profile for a user, built from 4 months of transactions. One chunk per user (`period_year=0, period_month=0`).
-
-portrait-worker loop runs **every 60 seconds**:
+Runs **daily at 02:00 UTC** as `detect_shift_alerts_job` in the scheduler-worker:
 
 ```
-_portrait_refresh_loop
+detect_shift_alerts_job
   │
-  ├── SqlaPortraitQueue.pop_dirty(limit=10)
-  │       └── DELETE FROM portrait_queue
-  │           WHERE user_id IN (
-  │               SELECT user_id ORDER BY marked_at LIMIT 10
-  │               FOR UPDATE SKIP LOCKED
-  │           ) RETURNING user_id
-  │
-  └── for each user_id:
-        PortraitPipeline.refresh(user_id)
-          │
-          ├── BudgetSummaryReader.read_history_months(user_id, n=4)
-          │       └── last 4 months of transactions
-          │
-          ├── MonthlyAggregator.aggregate() per month → MonthlyAggregation[]
-          │
-          ├── PortraitAggregator.format_portrait_text(recent, baselines)
-          │       → spending patterns, income trends, category dynamics
-          │
-          ├── compute_semantic_hash(all_aggs)
-          │
-          ├── TextEmbedder.embed(portrait_text) → vector[1536]
-          │
-          └── ChunkWriter.upsert(
-                  chunk_type="user_portrait",
-                  period_year=0, period_month=0,
-                  content=portrait_text,
-                  embedding=vector
-              )
-
-        On refresh error:
-          └── SqlaPortraitQueue.mark_dirty(uid)  ← requeue, no data loss
+  └── for each recently-active user_id:
+        │
+        ├── BudgetSummaryReader.read_month(user_id, year, month)
+        │       └── SELECT transactions JOIN categories
+        │           GROUP BY currency, type, category
+        │
+        ├── BudgetSummaryReader.read_history_months(user_id, year, month, n=3)
+        │       └── same, for 3 previous months
+        │
+        ├── MonthlyAggregator.aggregate() → MonthlyAggregation per currency
+        │       (total income, total expense, savings rate,
+        │        top categories, day-of-month distribution)
+        │
+        ├── BehavioralShiftDetector.detect(current, history)
+        │       Compares current month vs prior 3 months:
+        │       • expense_spike:    expenses rose >15% / >30%
+        │       • income_drop:      income fell >10% / >20%
+        │       • savings_collapse: savings rate < 15%
+        │       • savings_decline:  savings rate dropped >8%
+        │       • category_spike:   anomalous category growth
+        │
+        └── AlertWriter.write_shift_alerts(user_id, year, month, shifts)
+                └── For each shift where alert_threshold.is_alertworthy():
+                    INSERT INTO user_alerts (type, subtype, ...)
+                    ON CONFLICT (user_id, subtype,
+                                period_year, period_month)
+                    DO NOTHING  ← idempotent
 ```
 
-**When portrait_queue is populated:**
-- Weekly (Monday 03:00 UTC): scheduler calls `mark_all_dirty()` → all users enqueued
-- Potentially after significant transaction changes (future enhancement)
+**Idempotency:** the unique constraint `ux_user_alerts_dedup` on `(user_id, subtype, period_year, period_month)` means re-running the job on the same period is safe. `subtype` is the shift type (or `"<type>:<category>"` for category spikes), so one alert per distinct shift per period.
 
 ---
 
@@ -275,106 +162,105 @@ ProcessInsightUseCase
   │       Wrong user_id → InsightNotFoundError (defense-in-depth)
   │       Already terminal → InsightAlreadyTerminalError → consumer marks processed, no DLQ
   │
-  ├── EmbeddingPipeline.refresh(user_id, year, month)
-  │       ← ensures chunks are fresh before retrieval (idempotent)
+  ├── build_insight_context (DETERMINISTIC — no embeddings, no vector search):
+  │       BudgetSummaryReader.read_month(user_id, year, month) → current aggregate
+  │       BudgetSummaryReader.read_history_months(user_id, year, month, n=3) → prior 3
+  │       MonthlyAggregator.aggregate() per month → MonthlyAggregation[]
+  │       BehavioralShiftDetector.detect(current, history) → shifts (if any)
+  │       format_monthly_summary(agg) + format_shift_text(shifts) → InsightContextChunk[]
+  │         (deterministic context passed to the AI client)
   │
-  ├── TextEmbedder.embed("Financial insights for {year}-{month}")
-  │       → query_vector[1536]
-  │
-  ├── ChunkRetriever.search(user_id, query_vector,
-  │       monthly_top_k=3, shift_top_k=2)
-  │       └── SELECT ... ORDER BY embedding <=> query_vector
-  │           WHERE user_id=? AND chunk_type IN (monthly_summary, behavioral_shift)
-  │           → top-3 monthly_summary + top-2 behavioral_shift
-  │
-  ├── ChunkRetriever.get_portrait(user_id)
-  │       └── SELECT ... WHERE chunk_type='user_portrait' AND user_id=?
-  │           if exists → prepend to chunks
-  │
-  ├── assess_quality(chunks):
-  │       FULL    = has monthly_summary AND behavioral_shift chunks
-  │       PARTIAL = has only one type
-  │       NONE    = no chunks → mark_failed, stop (AI never called)
-  │
-  ├── _trim_chunks(chunks, budget=12_000 tokens):
-  │       tiktoken count total prompt tokens (4/msg formula + 11 overhead)
-  │       evict lowest-similarity non-portrait chunks until within budget
-  │       portrait (similarity=1.0) always pinned
-  │       logs token_budget_trim (WARNING per eviction) + token_budget_trimmed (INFO summary)
+  ├── assess_quality (deterministic):
+  │       NONE    = no transaction rows for the period → mark_failed, stop
+  │                 (AI never called without user data)
+  │       FULL    = rows present AND behavioral shifts detected
+  │       PARTIAL = rows present AND no shifts
   │
   ├── BudgetSummaryReader.read_month() → BudgetSummarySnapshot (per-currency totals)
   │
-  ├── AIInsightClient.generate(InsightRequest)
-  │       → OpenAI gpt-4o (structured output):
+  ├── AIInsightClient.generate(InsightRequest)   ← FallbackAIInsightClient (F2)
+  │       primary → OpenAI gpt-4o (structured output):
   │         system: financial analyst persona
-  │         context: portrait + monthly summaries + behavioral shifts
+  │         context: deterministic monthly summary + behavioral shift text
+  │         prompt_cache_key=user_id (F1 prompt caching)
   │         → { title, description, impact_score, tokens_used }
+  │       on OpenAI gateway failure (rate-limit / timeout / 5xx / breaker OPEN):
+  │         → DeterministicInsightClient: vendor-free templated summary from the
+  │           same context chunks (insight_fallback_total{reason}); insight still
+  │           completes (degraded) instead of dying.
   │
   └── insight.mark_completed(title, description, impact_score,
           context_quality, generated_at, budget_summary)
       SAVE → UPDATE insights SET status=COMPLETED, ...
 
-On error: → publish to DLQ topic
+On unexpected (non-gateway) error: → publish to DLQ topic
 
 Reaper (scheduler-worker, every 10 min):
   lease expired + retry_count < max_retries → flip PROCESSING → QUEUED + re-emit InsightRequested
   lease expired + retry_count >= max_retries → flip PROCESSING → FAILED
 ```
 
-**Polling:** Browser polls `GET /v1/insights/{id}` every 2s until `status = COMPLETED | FAILED`.
+**Delivery to browser (F4):** `GET /v1/insights/{id}/stream` (SSE) pushes status
+transitions + the terminal COMPLETED/FAILED payload the instant the worker writes
+the row, then closes (~2-min timeout sentinel). A low-frequency `GET /v1/insights/{id}`
+poll remains as a backstop. Generation is out-of-band in the worker, so the stream
+watches the row, not LLM tokens.
 
 ---
 
 ## 5. Chat
 
-Both endpoints share the same retrieval and AI call path.
+Chat is **tools-only**: an OpenAI **function-calling** loop over a typed
+`ChatTools` library — 6 user-scoped tools (`get_month_summary`,
+`get_category_trend`, `get_spend_window`, `get_user_profile`,
+`search_transactions`, `list_categories`). The model requests exactly the data
+it needs; the use case provides a `tool_executor` closure bound to the request
+`user_id` (server-side — the model cannot supply a user id). `search_transactions`
+is a pg_trgm fuzzy match on `merchant`/`notes` (no vector search — chat does not
+touch the embedder or pgvector). The loop is iteration-capped; tool results are
+treated as untrusted data. `ChatTools` opens a fresh short DB session per call
+(no connection held across OpenAI rounds). Tool-round + final-answer tokens are
+all charged to `ChatTokenBudget`.
+
+Both endpoints (`/v1/chat`, `/v1/chat/stream`) share the same save-turns +
+token-budget tail.
 
 ```
 POST /v1/chat          → ChatQueryUseCase   (returns full response at once)
 POST /v1/chat/stream   → ChatStreamUseCase  (SSE: streams tokens as they arrive)
 
-Shared retrieval path:
+Shared tools path:
   ├── chat_rate_limit dependency:
   │       Redis INCR "rl:chat:{user_id}:{minute_window}"
   │       If > 20 → HTTP 429
-  │
-  ├── TextEmbedder.embed(user_message) → query_vector[1536]
-  │
-  ├── ChunkRetriever.search(user_id, query_vector,
-  │       monthly_top_k=2, shift_top_k=2)
-  │       → 2 monthly_summary + 2 behavioral_shift (max 4)
-  │
-  ├── ChunkRetriever.get_portrait(user_id)
-  │       If exists → prepend: portrait + 2 monthly + 2 shift = 5 chunks max
-  │
-  ├── assess_quality(chunks) → FULL | PARTIAL | NONE
   │
   ├── ChatHistoryStore.last_n(user_id, n=5)
   │       └── SELECT ... WHERE user_id=?
   │           ORDER BY created_at DESC LIMIT 5
   │           → reversed() → chronological order
   │
-  ├── [ChatStream only] ChatTokenBudget.check(user_id)
+  ├── ChatTokenBudget.check(user_id)
   │       → Redis: enforce per-user token cap for the billing period
   │
-  ├── ChatAIClient.chat(ChatRequest)
+  ├── ChatAIClient.chat_with_tools / stream_with_tools(ChatToolsRequest)
   │       model: gpt-4o-mini, temperature=0.4, max_tokens=800
-  │       [system]: "You are a personal finance assistant..."
-  │       [system]: chunks as financial context
+  │       prompt_cache_key=user_id (F1 prompt caching — stable prefix kept hot)
+  │       [system]: finance assistant that fetches data via tools
   │       [history]: last 5 turns (role=user/assistant)
   │       [user]: current message
+  │       [tools]: typed ChatTools schemas (bounded iteration cap)
   │       → answer text (or token stream for SSE)
   │
-  ├── [ChatStream only] ChatTokenBudget.record(user_id, tokens_used)
-  │       On client disconnect (usage sentinel never arrives): estimate_tokens
-  │       fallback (chars // 4 + 1) records an estimated spend; logs
-  │       chat_stream_usage_estimated.
+  ├── ChatTokenBudget.record(user_id, tokens_used)
+  │       On client disconnect (usage sentinel never arrives):
+  │       estimate_tokens_from_text fallback (chars // 4 + 1) records an
+  │       estimated spend; logs chat_stream_usage_estimated.
   │
   ├── ChatHistoryStore.save_turns(user_id, [
   │       ChatTurn(role="user",      content=message,  chunks_used=(),
   │                created_at=clock.now()),        ← first clock.now() call
   │       ChatTurn(role="assistant", content=answer,
-  │                chunks_used=[{chunk_type, period_label, similarity}, ...],
+  │                chunks_used=[{tool: name}, ...],
   │                created_at=clock.now())         ← second call; later by wall clock
   │   ])
   │   Ordering guaranteed by monotone UUIDv7 id tie-break:
@@ -396,7 +282,7 @@ DELETE /v1/chat/history
 
 ## 6. Alerts
 
-Alerts are created **automatically** during embedding refresh (step 2) — not by user request.
+Alerts are created **automatically** by `detect_shift_alerts_job` (scheduler-worker, daily 02:00 UTC) — not by user request.
 
 ### Storage
 
@@ -404,18 +290,19 @@ Alerts are created **automatically** during embedding refresh (step 2) — not b
 user_alerts:
   id           UUID
   user_id      UUID → FK users
-  type         VARCHAR  (SPENDING_SPIKE | INCOME_DROP | SAVINGS_COLLAPSE |
-                          SAVINGS_DECLINE | CATEGORY_SPIKE)
+  type         VARCHAR(30)   (SPENDING_SPIKE | INCOME_DROP | SAVINGS_COLLAPSE)
+  subtype      VARCHAR(100)  (shift type, or "<type>:<category>" for category
+                              spikes — part of the dedup key)
   title        TEXT
   body         TEXT     (amounts, currency, % change)
-  currency     VARCHAR
-  period_year  INT
-  period_month INT
+  metadata     JSONB
+  period_year  SMALLINT
+  period_month SMALLINT
   is_read      BOOLEAN  DEFAULT false
   created_at   TIMESTAMPTZ
 
-Unique: (user_id, type, currency, period_year, period_month)
-→ one alert per type per period
+Unique: ux_user_alerts_dedup (user_id, subtype, period_year, period_month)
+→ one alert per distinct shift subtype per period
 ```
 
 ### HTTP endpoints
@@ -473,41 +360,30 @@ ParseReceiptUseCase
 
 ```
 User creates transaction
-        │
-        ├─ [sync]  → transactions table
-        ├─ [sync]  → dirty_periods UPSERT (same DB TX)
-        └─ [async] → outbox → Kafka yomochi.transactions.v1
+        └─ [sync]  → transactions table + audit_events (same DB TX)
+           (no outbox/Kafka path for transactions)
 
-transaction-worker (Kafka)
-        └─ UPSERT dirty_periods (secondary, for future external sources)
-
-insight-worker: embedding_refresh_loop (every 30s)
-        ├─ pop_dirty → EmbeddingPipeline.refresh(user_id, year, month)
-        ├─ aggregate transactions → monthly_summary text + behavioral_shift text
-        ├─ embed → store chunks in user_financial_chunks (pgvector)
-        └─ if shifts detected → write user_alerts (idempotent)
-
-portrait-worker: portrait_refresh_loop (every 60s, weekly scheduler trigger)
-        ├─ pop portrait_queue
-        ├─ read 4 months → format_portrait_text
-        └─ embed → upsert user_portrait chunk in user_financial_chunks
+scheduler-worker: detect_shift_alerts_job (02:00 UTC daily)
+        ├─ for each recently-active user: read month + 3-month history
+        ├─ MonthlyAggregator + BehavioralShiftDetector → shifts
+        └─ write user_alerts (idempotent)
 
 User requests insight
         ├─ [sync]  → Insight(PENDING) + InsightRequested in outbox
         └─ [async] → Kafka yomochi.insights.v1
 
-insight-worker: on_insight_event
-        ├─ EmbeddingPipeline.refresh (ensures chunks are current)
-        ├─ embed query → vector search: 3 monthly + 2 shift + portrait
-        ├─ assess_quality → FULL / PARTIAL / NONE
+insight-worker: on_insight_event  (DETERMINISTIC)
+        ├─ read month aggregate + prior 3 months (BudgetSummaryReader)
+        ├─ MonthlyAggregator + BehavioralShiftDetector → deterministic context (InsightContextChunk[])
+        ├─ assess_quality → NONE (no rows) / FULL (rows+shift) / PARTIAL (rows, no shift)
         ├─ OpenAI gpt-4o (structured output) → title, description, impact_score
         └─ save Insight(COMPLETED) + BudgetSummarySnapshot
 
 User reads alerts
-        └─ SELECT user_alerts (already populated by embedding pipeline)
+        └─ SELECT user_alerts (populated by detect_shift_alerts_job)
 
-User chats
-        ├─ embed question → vector search: portrait + 2 monthly + 2 shift
+User chats  (function-calling / tools loop)
+        ├─ OpenAI function-calling over ChatTools (6 tools, SQL + pg_trgm)
         ├─ load last 5 chat turns
         ├─ OpenAI gpt-4o-mini (plain text or SSE stream)
         └─ save 2 chat_turns (user + assistant)
@@ -522,12 +398,9 @@ User chats
 | `users` | Accounts, subscription plan |
 | `transactions` | All financial operations |
 | `categories` | Category hierarchy (system + user-defined) |
-| `dirty_periods` | Queue for embedding refresh; unique (user_id, year, month) |
-| `user_financial_chunks` | RAG chunks with pgvector embeddings (monthly_summary, behavioral_shift, user_portrait) |
 | `insights` | Generated insights + budget_snapshot JSONB |
 | `user_alerts` | Behavioral shift alerts (spending spike, income drop, etc.) |
-| `portrait_queue` | Queue for portrait rebuild; one row per user |
-| `chat_turns` | Chat history (role + chunks_used JSONB) |
+| `chat_turns` | Chat history (role + tool calls JSONB) |
 | `outbox_events` | Transactional outbox → Kafka (status: PENDING / SENT / FAILED) |
 | `recurring_rules` | Recurring transaction rules state machine |
 | `audit_events` | Login, transaction CRUD, insight requests (partitioned by month) |
@@ -540,9 +413,8 @@ User chats
 
 | Service | Usage |
 |---------|-------|
-| **OpenAI text-embedding-3-small** | All embeddings: monthly chunks, shift chunks, portrait, chat queries, search queries |
 | **OpenAI gpt-4o** | Insight generation (structured output: title, description, impact_score) |
-| **OpenAI gpt-4o-mini** | Chat (non-streaming + SSE), parse-text, receipt extraction |
-| **Kafka** | TransactionCreated/Updated/Deleted, InsightRequested/Completed, DLQ |
-| **Redis** | Sessions, rate limiting (IP + per-user chat), consumer idempotency, search cache, chat token budget, cached text embedder |
-| **PostgreSQL 17 + pgvector** | Primary store + vector similarity search (cosine, HNSW index) |
+| **OpenAI gpt-4o-mini** | Chat function-calling loop (tools mode, non-streaming + SSE), parse-text, receipt extraction |
+| **Kafka** | InsightRequested/Completed, DLQ (transaction events removed) |
+| **Redis** | Sessions, rate limiting (IP + per-user chat), consumer idempotency, search cache, chat token budget |
+| **PostgreSQL 17 + pg_trgm** | Primary store + pg_trgm fuzzy search (`search_transactions` via GIN index on merchant/notes) |

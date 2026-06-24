@@ -26,11 +26,7 @@ def _make_uc(claim_side_effect: Exception):
 
     uow = InsightWorkUnit(
         insight_repo=insight_repo,
-        chunk_writer=AsyncMock(),
-        chunk_retriever=AsyncMock(),
         budget_reader=AsyncMock(),
-        alert_writer=AsyncMock(),
-        dirty_period_repo=AsyncMock(),
     )
 
     @asynccontextmanager
@@ -42,7 +38,6 @@ def _make_uc(claim_side_effect: Exception):
 
     return ProcessInsightUseCase(
         work_unit_factory=factory,
-        embedder=AsyncMock(),
         ai_client=AsyncMock(),
     )
 

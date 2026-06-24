@@ -10,9 +10,12 @@ from app.outbound.adapters.openai._gateway.client_factory import (
     build_openai_gateway,
 )
 from app.outbound.adapters.openai._gateway.gateway import (
+    ContentDelta,
     Endpoint,
     OpenAIGateway,
+    ToolCallsDelta,
     UsageInfo,
+    cached_tokens_from_usage,
 )
 
 __all__ = [
@@ -20,10 +23,13 @@ __all__ = [
     "AIRateLimitedError",
     "AITimeoutError",
     "AIUnavailableError",
+    "ContentDelta",
     "Endpoint",
     "OpenAICallError",
     "OpenAIGateway",
     "OpenAIGatewayConfig",
+    "ToolCallsDelta",
     "UsageInfo",
     "build_openai_gateway",
+    "cached_tokens_from_usage",
 ]

@@ -28,9 +28,7 @@ spec:
         values:
           - outbox-worker
           - insight-worker
-          - portrait-worker
           - scheduler-worker
-          - transaction-worker
   podMetricsEndpoints:
     - port: metrics
       path: /metrics

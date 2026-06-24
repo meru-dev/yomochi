@@ -41,11 +41,7 @@ def _make_use_case(
 
     uow = InsightWorkUnit(
         insight_repo=insight_repo,
-        chunk_writer=AsyncMock(),
-        chunk_retriever=AsyncMock(),
         budget_reader=AsyncMock(),
-        alert_writer=AsyncMock(),
-        dirty_period_repo=AsyncMock(),
     )
 
     class _Factory:
@@ -60,7 +56,6 @@ def _make_use_case(
 
     return ProcessInsightUseCase(
         work_unit_factory=_Factory(),  # type: ignore[arg-type]
-        embedder=AsyncMock(),
         ai_client=AsyncMock(),
     )
 

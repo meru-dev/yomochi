@@ -14,13 +14,7 @@ api:
 outboxWorker:
   replicaCount: 1
 
-transactionWorker:
-  replicaCount: 1
-
 insightWorker:
-  replicaCount: 1
-
-portraitWorker:
   replicaCount: 1
 
 schedulerWorker:

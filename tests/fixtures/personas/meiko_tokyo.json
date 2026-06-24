@@ -1,1193 +1,3311 @@
 {
   "version": 1,
-  "persona": "meiko_tokyo",
-  "description": "Tokyo office worker, JPY salary, occasional USD subscriptions. 6 months of data.",
   "user": {
     "email": "meiko@demo.yomochi.dev",
     "password": "Demo2026!meiko"
   },
-  "recurring": [
-    {
-      "amount": "80000",
-      "currency": "JPY",
-      "type": "expense",
-      "recurrence": "monthly",
-      "start_date": "2025-11-01",
-      "day_of_month": 1,
-      "merchant": "landlord",
-      "notes": "Monthly apartment rent"
-    }
-  ],
   "transactions": [
     {
-      "date": "2025-11-01",
+      "date": "2025-12-01",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "1283",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "November rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
-    },
-    {
-      "date": "2025-11-01",
-      "type": "EXPENSE",
-      "amount": "8000",
-      "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
-    },
-    {
-      "date": "2025-11-03",
-      "type": "EXPENSE",
-      "amount": "850",
-      "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-05",
-      "type": "EXPENSE",
-      "amount": "550",
-      "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
-    },
-    {
-      "date": "2025-11-06",
-      "type": "EXPENSE",
-      "amount": "680",
-      "currency": "JPY",
-      "merchant": "Yoshinoya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
-    },
-    {
-      "date": "2025-11-07",
-      "type": "EXPENSE",
-      "amount": "1200",
-      "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-08",
-      "type": "EXPENSE",
-      "amount": "12000",
-      "currency": "JPY",
-      "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
-    },
-    {
-      "date": "2025-11-10",
-      "type": "EXPENSE",
-      "amount": "4500",
-      "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
-    },
-    {
-      "date": "2025-11-10",
-      "type": "EXPENSE",
-      "amount": "7200",
-      "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
-    },
-    {
-      "date": "2025-11-12",
-      "type": "EXPENSE",
-      "amount": "650",
-      "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-13",
-      "type": "EXPENSE",
-      "amount": "2400",
-      "currency": "JPY",
-      "merchant": "Sushiro",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
-    },
-    {
-      "date": "2025-11-14",
-      "type": "EXPENSE",
-      "amount": "4500",
-      "currency": "JPY",
-      "merchant": "Amazon.co.jp",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000016"
-    },
-    {
-      "date": "2025-11-15",
-      "type": "EXPENSE",
-      "amount": "1980",
-      "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2025-11-15",
-      "type": "EXPENSE",
-      "amount": "490",
-      "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
-    },
-    {
-      "date": "2025-11-17",
-      "type": "EXPENSE",
-      "amount": "920",
-      "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-18",
-      "type": "EXPENSE",
-      "amount": "620",
-      "currency": "JPY",
-      "merchant": "Matsuya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
-    },
-    {
-      "date": "2025-11-19",
-      "type": "EXPENSE",
-      "amount": "780",
-      "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-20",
-      "type": "EXPENSE",
-      "amount": "18.99",
-      "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2025-11-21",
-      "type": "EXPENSE",
-      "amount": "890",
-      "currency": "JPY",
-      "merchant": "Mos Burger",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
-    },
-    {
-      "date": "2025-11-22",
-      "type": "EXPENSE",
-      "amount": "3000",
-      "currency": "JPY",
-      "merchant": "Suica top-up",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000009"
-    },
-    {
-      "date": "2025-11-23",
-      "type": "EXPENSE",
-      "amount": "1100",
-      "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-24",
-      "type": "EXPENSE",
-      "amount": "520",
-      "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
-    },
-    {
-      "date": "2025-11-25",
-      "type": "INCOME",
-      "amount": "250000",
-      "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "November salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
-    },
-    {
-      "date": "2025-11-27",
-      "type": "EXPENSE",
-      "amount": "430",
-      "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
-    },
-    {
-      "date": "2025-11-29",
-      "type": "EXPENSE",
-      "amount": "1450",
-      "currency": "JPY",
-      "merchant": "Saizeriya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
     },
     {
       "date": "2025-12-01",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "6797",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "December rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
-    },
-    {
-      "date": "2025-12-01",
-      "type": "EXPENSE",
-      "amount": "8000",
-      "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
     },
     {
       "date": "2025-12-02",
       "type": "EXPENSE",
-      "amount": "1050",
+      "amount": "1490",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2025-12-03",
+      "type": "EXPENSE",
+      "amount": "980",
+      "currency": "JPY",
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2025-12-03",
+      "type": "EXPENSE",
+      "amount": "1039",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": "Yoshinoya purchase"
+    },
+    {
+      "date": "2025-12-03",
+      "type": "EXPENSE",
+      "amount": "373",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2025-12-04",
       "type": "EXPENSE",
-      "amount": "2800",
+      "amount": "6667",
       "currency": "JPY",
-      "merchant": "Yamada Denki",
-      "notes": "USB-C cables",
-      "category_id": "00000000-0000-7000-8002-000000000015"
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2025-12-04",
+      "type": "EXPENSE",
+      "amount": "843",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
     },
     {
       "date": "2025-12-05",
       "type": "EXPENSE",
-      "amount": "470",
+      "amount": "7000",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2025-12-05",
+      "type": "EXPENSE",
+      "amount": "1442",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2025-12-05",
+      "type": "EXPENSE",
+      "amount": "6640",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
     },
     {
       "date": "2025-12-07",
       "type": "EXPENSE",
-      "amount": "1350",
+      "amount": "880",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2025-12-08",
       "type": "EXPENSE",
-      "amount": "12000",
+      "amount": "1471",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "EXPENSE",
+      "amount": "2969",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "EXPENSE",
+      "amount": "929",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "EXPENSE",
+      "amount": "872",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2025-12-08",
+      "type": "EXPENSE",
+      "amount": "332",
       "currency": "JPY",
       "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "notes": "JR East purchase"
     },
     {
-      "date": "2025-12-10",
+      "date": "2025-12-08",
       "type": "EXPENSE",
-      "amount": "5200",
+      "amount": "3499",
       "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Uber",
+      "notes": "Uber purchase"
     },
     {
-      "date": "2025-12-10",
+      "date": "2025-12-09",
       "type": "EXPENSE",
-      "amount": "8100",
+      "amount": "956",
       "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2025-12-09",
+      "type": "EXPENSE",
+      "amount": "1218",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2025-12-11",
+      "type": "EXPENSE",
+      "amount": "593",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2025-12-11",
+      "type": "EXPENSE",
+      "amount": "308",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2025-12-12",
       "type": "EXPENSE",
-      "amount": "680",
+      "amount": "6119",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2025-12-12",
+      "type": "EXPENSE",
+      "amount": "953",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2025-12-12",
+      "type": "EXPENSE",
+      "amount": "1027",
       "currency": "JPY",
       "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "notes": "Lawson purchase"
     },
     {
-      "date": "2025-12-14",
+      "date": "2025-12-12",
       "type": "EXPENSE",
-      "amount": "5800",
+      "amount": "2996",
       "currency": "JPY",
-      "merchant": "Sushiro",
-      "notes": "Year-end dinner",
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2025-12-13",
+      "type": "EXPENSE",
+      "amount": "869",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2025-12-13",
+      "type": "EXPENSE",
+      "amount": "2274",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
     },
     {
       "date": "2025-12-15",
-      "type": "EXPENSE",
-      "amount": "1980",
-      "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2025-12-15",
-      "type": "EXPENSE",
-      "amount": "18.99",
+      "type": "INCOME",
+      "amount": "420",
       "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "merchant": "Dupont Studio invoice",
+      "notes": "Freelance project"
+    },
+    {
+      "date": "2025-12-15",
+      "type": "EXPENSE",
+      "amount": "688",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2025-12-16",
+      "type": "EXPENSE",
+      "amount": "402",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2025-12-17",
       "type": "EXPENSE",
-      "amount": "12500",
+      "amount": "5542",
       "currency": "JPY",
       "merchant": "Amazon.co.jp",
-      "notes": "Christmas gifts",
-      "category_id": "00000000-0000-7000-8002-000000000016"
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2025-12-18",
+      "type": "EXPENSE",
+      "amount": "5112",
+      "currency": "JPY",
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2025-12-18",
+      "type": "EXPENSE",
+      "amount": "670",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2025-12-18",
+      "type": "EXPENSE",
+      "amount": "312",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2025-12-19",
       "type": "EXPENSE",
-      "amount": "860",
+      "amount": "2628",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2025-12-19",
+      "type": "EXPENSE",
+      "amount": "478",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2025-12-20",
+      "type": "EXPENSE",
+      "amount": "515",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2025-12-20",
+      "type": "EXPENSE",
+      "amount": "1091",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
     },
     {
       "date": "2025-12-21",
       "type": "EXPENSE",
-      "amount": "3200",
+      "amount": "997",
       "currency": "JPY",
-      "merchant": "Mos Burger",
-      "notes": "Weekend lunch",
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2025-12-21",
+      "type": "EXPENSE",
+      "amount": "630",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2025-12-22",
       "type": "EXPENSE",
-      "amount": "540",
+      "amount": "846",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2025-12-23",
+      "type": "EXPENSE",
+      "amount": "3132",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2025-12-23",
+      "type": "EXPENSE",
+      "amount": "2831",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
     },
     {
       "date": "2025-12-24",
       "type": "EXPENSE",
-      "amount": "8900",
+      "amount": "2026",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": "Christmas cake, champagne",
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2025-12-24",
+      "type": "EXPENSE",
+      "amount": "755",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2025-12-24",
+      "type": "EXPENSE",
+      "amount": "325",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2025-12-24",
+      "type": "EXPENSE",
+      "amount": "2097",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
     },
     {
       "date": "2025-12-25",
       "type": "INCOME",
-      "amount": "250000",
+      "amount": "320000",
       "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "December salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2025-12-25",
+      "type": "EXPENSE",
+      "amount": "1885",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
     },
     {
       "date": "2025-12-26",
       "type": "EXPENSE",
-      "amount": "4500",
+      "amount": "7574",
       "currency": "JPY",
-      "merchant": "Suica top-up",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
     },
     {
       "date": "2025-12-28",
       "type": "EXPENSE",
-      "amount": "2100",
+      "amount": "776",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2025-12-29",
+      "type": "EXPENSE",
+      "amount": "12560",
+      "currency": "JPY",
+      "merchant": "Bic Camera",
+      "notes": "Bic Camera purchase"
     },
     {
       "date": "2025-12-30",
       "type": "EXPENSE",
-      "amount": "6200",
+      "amount": "426",
       "currency": "JPY",
-      "merchant": "Seiyu",
-      "notes": "New Year groceries",
-      "category_id": "00000000-0000-7000-8002-000000000001"
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
-      "date": "2026-01-01",
+      "date": "2025-12-30",
       "type": "EXPENSE",
-      "amount": "3500",
+      "amount": "2655",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": "New Year snacks",
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
     },
     {
-      "date": "2026-01-01",
+      "date": "2025-12-31",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "2478",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "January rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-01-02",
+      "type": "EXPENSE",
+      "amount": "1490",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-01-02",
+      "type": "EXPENSE",
+      "amount": "4798",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "980",
+      "currency": "JPY",
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "894",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "646",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "360",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "332",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-03",
+      "type": "EXPENSE",
+      "amount": "2526",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
     },
     {
       "date": "2026-01-04",
       "type": "EXPENSE",
-      "amount": "8000",
+      "amount": "2702",
       "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-01-04",
+      "type": "EXPENSE",
+      "amount": "705",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-01-04",
+      "type": "EXPENSE",
+      "amount": "2253",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-01-04",
+      "type": "EXPENSE",
+      "amount": "1597",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
     },
     {
       "date": "2026-01-05",
       "type": "EXPENSE",
-      "amount": "560",
+      "amount": "7000",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2026-01-05",
+      "type": "EXPENSE",
+      "amount": "2631",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
     },
     {
       "date": "2026-01-06",
       "type": "EXPENSE",
-      "amount": "920",
+      "amount": "3358",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-01-06",
+      "type": "EXPENSE",
+      "amount": "822",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-01-07",
+      "type": "EXPENSE",
+      "amount": "3558",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
     },
     {
       "date": "2026-01-08",
       "type": "EXPENSE",
-      "amount": "12000",
+      "amount": "409",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-01-08",
+      "type": "EXPENSE",
+      "amount": "2506",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-01-09",
+      "type": "EXPENSE",
+      "amount": "797",
       "currency": "JPY",
       "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-01-10",
       "type": "EXPENSE",
-      "amount": "6800",
+      "amount": "6247",
       "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": "Winter bill peak",
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
     },
     {
       "date": "2026-01-10",
       "type": "EXPENSE",
-      "amount": "7200",
+      "amount": "1097",
       "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": "Winter bill peak",
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-01-11",
+      "type": "EXPENSE",
+      "amount": "900",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
     },
     {
       "date": "2026-01-12",
       "type": "EXPENSE",
-      "amount": "750",
+      "amount": "5229",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2026-01-13",
+      "type": "EXPENSE",
+      "amount": "3940",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
     },
     {
       "date": "2026-01-14",
       "type": "EXPENSE",
-      "amount": "1900",
+      "amount": "16609",
       "currency": "JPY",
-      "merchant": "Yoshinoya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Yamada Denki",
+      "notes": "Yamada Denki purchase"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-01-14",
       "type": "EXPENSE",
-      "amount": "1980",
+      "amount": "5025",
       "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
-      "date": "2026-01-15",
+      "date": "2026-01-17",
       "type": "EXPENSE",
-      "amount": "18.99",
-      "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "amount": "2529",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
     },
     {
-      "date": "2026-01-16",
+      "date": "2026-01-17",
       "type": "EXPENSE",
-      "amount": "880",
+      "amount": "5294",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
     },
     {
       "date": "2026-01-18",
       "type": "EXPENSE",
-      "amount": "3400",
+      "amount": "4720",
       "currency": "JPY",
-      "merchant": "Amazon.co.jp",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000016"
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
     },
     {
-      "date": "2026-01-20",
+      "date": "2026-01-18",
       "type": "EXPENSE",
-      "amount": "490",
+      "amount": "918",
       "currency": "JPY",
       "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-01-18",
+      "type": "EXPENSE",
+      "amount": "435",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-19",
+      "type": "EXPENSE",
+      "amount": "867",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-19",
+      "type": "EXPENSE",
+      "amount": "525",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-01-21",
+      "type": "EXPENSE",
+      "amount": "1044",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2026-01-22",
       "type": "EXPENSE",
-      "amount": "1250",
-      "currency": "JPY",
-      "merchant": "Matsuya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
-    },
-    {
-      "date": "2026-01-23",
-      "type": "EXPENSE",
-      "amount": "690",
+      "amount": "1273",
       "currency": "JPY",
       "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-01-22",
+      "type": "EXPENSE",
+      "amount": "6853",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-01-24",
+      "type": "EXPENSE",
+      "amount": "3138",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
     },
     {
       "date": "2026-01-25",
       "type": "INCOME",
-      "amount": "250000",
+      "amount": "320000",
       "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "January salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2026-01-25",
+      "type": "EXPENSE",
+      "amount": "4125",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-01-25",
+      "type": "EXPENSE",
+      "amount": "1132",
+      "currency": "JPY",
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2026-01-25",
+      "type": "EXPENSE",
+      "amount": "537",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-01-25",
+      "type": "EXPENSE",
+      "amount": "691",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2026-01-26",
       "type": "EXPENSE",
-      "amount": "2700",
+      "amount": "1733",
       "currency": "JPY",
-      "merchant": "Sushiro",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-01-26",
+      "type": "EXPENSE",
+      "amount": "2095",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
       "date": "2026-01-27",
       "type": "EXPENSE",
-      "amount": "3000",
+      "amount": "391",
       "currency": "JPY",
-      "merchant": "Suica top-up",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-01-28",
+      "type": "EXPENSE",
+      "amount": "2294",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-01-28",
+      "type": "EXPENSE",
+      "amount": "1522",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2026-01-29",
       "type": "EXPENSE",
-      "amount": "1040",
+      "amount": "6598",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-01-29",
+      "type": "EXPENSE",
+      "amount": "810",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-01-29",
+      "type": "EXPENSE",
+      "amount": "2529",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-01-30",
+      "type": "EXPENSE",
+      "amount": "1058",
+      "currency": "JPY",
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2026-01-30",
+      "type": "EXPENSE",
+      "amount": "650",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-01-31",
+      "type": "EXPENSE",
+      "amount": "919",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": "Yoshinoya purchase"
+    },
+    {
+      "date": "2026-01-31",
+      "type": "EXPENSE",
+      "amount": "683",
       "currency": "JPY",
       "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-02-01",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "899",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "February rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
     },
     {
       "date": "2026-02-01",
       "type": "EXPENSE",
-      "amount": "8000",
+      "amount": "769",
       "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "EXPENSE",
+      "amount": "1490",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "EXPENSE",
+      "amount": "3114",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "EXPENSE",
+      "amount": "2174",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "EXPENSE",
+      "amount": "816",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-02-02",
+      "type": "EXPENSE",
+      "amount": "780",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
     },
     {
       "date": "2026-02-03",
       "type": "EXPENSE",
-      "amount": "840",
+      "amount": "980",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-02-03",
+      "type": "EXPENSE",
+      "amount": "1868",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-02-03",
+      "type": "EXPENSE",
+      "amount": "1138",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-02-03",
+      "type": "EXPENSE",
+      "amount": "2900",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-02-04",
+      "type": "EXPENSE",
+      "amount": "754",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-02-05",
       "type": "EXPENSE",
-      "amount": "2600",
+      "amount": "7000",
       "currency": "JPY",
-      "merchant": "Saizeriya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
     },
     {
-      "date": "2026-02-06",
+      "date": "2026-02-07",
       "type": "EXPENSE",
-      "amount": "520",
+      "amount": "5041",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
     },
     {
-      "date": "2026-02-08",
+      "date": "2026-02-07",
       "type": "EXPENSE",
-      "amount": "12000",
+      "amount": "2315",
       "currency": "JPY",
-      "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-02-09",
+      "type": "EXPENSE",
+      "amount": "1110",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-02-09",
+      "type": "EXPENSE",
+      "amount": "267",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-02-09",
+      "type": "EXPENSE",
+      "amount": "1672",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-02-09",
+      "type": "EXPENSE",
+      "amount": "3808",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
     },
     {
       "date": "2026-02-10",
       "type": "EXPENSE",
-      "amount": "6500",
+      "amount": "513",
       "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
-      "date": "2026-02-10",
+      "date": "2026-02-11",
       "type": "EXPENSE",
-      "amount": "6900",
+      "amount": "679",
       "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-02-11",
+      "type": "EXPENSE",
+      "amount": "814",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-02-11",
+      "type": "EXPENSE",
+      "amount": "2951",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
     },
     {
       "date": "2026-02-12",
       "type": "EXPENSE",
-      "amount": "9800",
+      "amount": "5696",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": "Valentine chocolates",
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2026-02-12",
+      "type": "EXPENSE",
+      "amount": "591",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-02-14",
       "type": "EXPENSE",
-      "amount": "3200",
+      "amount": "1651",
       "currency": "JPY",
-      "merchant": "Mos Burger",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-02-14",
+      "type": "EXPENSE",
+      "amount": "2889",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-02-14",
+      "type": "EXPENSE",
+      "amount": "2326",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
     },
     {
       "date": "2026-02-15",
-      "type": "EXPENSE",
-      "amount": "1980",
-      "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2026-02-15",
-      "type": "EXPENSE",
-      "amount": "18.99",
+      "type": "INCOME",
+      "amount": "420",
       "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "merchant": "Dupont Studio invoice",
+      "notes": "Freelance project"
     },
     {
-      "date": "2026-02-16",
+      "date": "2026-02-15",
       "type": "EXPENSE",
-      "amount": "1150",
+      "amount": "2523",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "EXPENSE",
+      "amount": "3154",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-02-15",
+      "type": "EXPENSE",
+      "amount": "856",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-02-17",
+      "type": "EXPENSE",
+      "amount": "5202",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
       "date": "2026-02-18",
       "type": "EXPENSE",
-      "amount": "29.99",
-      "currency": "USD",
-      "merchant": "Adobe Creative Cloud",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "amount": "7875",
+      "currency": "JPY",
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2026-02-18",
+      "type": "EXPENSE",
+      "amount": "681",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-02-18",
+      "type": "EXPENSE",
+      "amount": "518",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-02-19",
+      "type": "EXPENSE",
+      "amount": "764",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-02-19",
+      "type": "EXPENSE",
+      "amount": "1437",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-02-19",
+      "type": "EXPENSE",
+      "amount": "251",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2026-02-20",
       "type": "EXPENSE",
-      "amount": "560",
+      "amount": "439",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-02-20",
+      "type": "EXPENSE",
+      "amount": "361",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2026-02-22",
       "type": "EXPENSE",
-      "amount": "720",
+      "amount": "943",
       "currency": "JPY",
       "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-02-22",
+      "type": "EXPENSE",
+      "amount": "607",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-02-22",
+      "type": "EXPENSE",
+      "amount": "3471",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-02-22",
+      "type": "EXPENSE",
+      "amount": "1112",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-02-22",
+      "type": "EXPENSE",
+      "amount": "6695",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-02-23",
+      "type": "EXPENSE",
+      "amount": "4793",
+      "currency": "JPY",
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
+    },
+    {
+      "date": "2026-02-23",
+      "type": "EXPENSE",
+      "amount": "4308",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
     },
     {
       "date": "2026-02-24",
       "type": "EXPENSE",
-      "amount": "6200",
+      "amount": "13064",
       "currency": "JPY",
-      "merchant": "Amazon.co.jp",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000016"
+      "merchant": "Yodobashi Camera",
+      "notes": "Yodobashi Camera purchase"
     },
     {
       "date": "2026-02-25",
       "type": "INCOME",
-      "amount": "250000",
+      "amount": "320000",
       "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "February salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
     },
     {
       "date": "2026-02-26",
       "type": "EXPENSE",
-      "amount": "930",
+      "amount": "1831",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-02-26",
+      "type": "EXPENSE",
+      "amount": "5076",
+      "currency": "JPY",
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
     },
     {
       "date": "2026-02-28",
       "type": "EXPENSE",
-      "amount": "2100",
+      "amount": "921",
       "currency": "JPY",
-      "merchant": "Yoshinoya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-02-28",
+      "type": "EXPENSE",
+      "amount": "615",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-02-28",
+      "type": "EXPENSE",
+      "amount": "761",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-02-28",
+      "type": "EXPENSE",
+      "amount": "2416",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
     },
     {
       "date": "2026-03-01",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "695",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "March rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
     },
     {
-      "date": "2026-03-01",
+      "date": "2026-03-02",
       "type": "EXPENSE",
-      "amount": "8000",
+      "amount": "1490",
       "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-03-02",
+      "type": "EXPENSE",
+      "amount": "1514",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-03-02",
+      "type": "EXPENSE",
+      "amount": "5224",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
     },
     {
       "date": "2026-03-03",
       "type": "EXPENSE",
-      "amount": "760",
+      "amount": "980",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-03-04",
+      "type": "EXPENSE",
+      "amount": "1208",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-03-04",
+      "type": "EXPENSE",
+      "amount": "1063",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-03-04",
+      "type": "EXPENSE",
+      "amount": "744",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-03-04",
+      "type": "EXPENSE",
+      "amount": "397",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2026-03-05",
       "type": "EXPENSE",
-      "amount": "1800",
+      "amount": "7000",
       "currency": "JPY",
-      "merchant": "Sushiro",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2026-03-05",
+      "type": "EXPENSE",
+      "amount": "721",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
     },
     {
       "date": "2026-03-06",
       "type": "EXPENSE",
-      "amount": "500",
+      "amount": "897",
       "currency": "JPY",
       "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "notes": "Starbucks purchase"
     },
     {
-      "date": "2026-03-08",
+      "date": "2026-03-07",
       "type": "EXPENSE",
-      "amount": "12000",
+      "amount": "2296",
       "currency": "JPY",
-      "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-03-07",
+      "type": "EXPENSE",
+      "amount": "1242",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-03-07",
+      "type": "EXPENSE",
+      "amount": "330",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-03-09",
+      "type": "EXPENSE",
+      "amount": "3523",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-03-09",
+      "type": "EXPENSE",
+      "amount": "601",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
     },
     {
       "date": "2026-03-10",
       "type": "EXPENSE",
-      "amount": "5000",
+      "amount": "716",
       "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
-      "date": "2026-03-10",
+      "date": "2026-03-11",
       "type": "EXPENSE",
-      "amount": "4800",
+      "amount": "820",
       "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-03-12",
       "type": "EXPENSE",
-      "amount": "1020",
+      "amount": "3878",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2026-03-12",
+      "type": "EXPENSE",
+      "amount": "981",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-03-12",
+      "type": "EXPENSE",
+      "amount": "2966",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-03-13",
+      "type": "EXPENSE",
+      "amount": "6911",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
       "date": "2026-03-14",
       "type": "EXPENSE",
-      "amount": "2900",
+      "amount": "6794",
       "currency": "JPY",
-      "merchant": "Mos Burger",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
     },
     {
-      "date": "2026-03-15",
+      "date": "2026-03-14",
       "type": "EXPENSE",
-      "amount": "1980",
-      "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2026-03-15",
-      "type": "EXPENSE",
-      "amount": "18.99",
-      "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2026-03-16",
-      "type": "EXPENSE",
-      "amount": "3000",
+      "amount": "2620",
       "currency": "JPY",
       "merchant": "Suica top-up",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-03-14",
+      "type": "EXPENSE",
+      "amount": "6947",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-03-15",
+      "type": "EXPENSE",
+      "amount": "6719",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-03-17",
+      "type": "EXPENSE",
+      "amount": "851",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-03-18",
       "type": "EXPENSE",
-      "amount": "870",
+      "amount": "7669",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": "Cherry blossom hanami snacks",
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2026-03-18",
+      "type": "EXPENSE",
+      "amount": "1101",
+      "currency": "JPY",
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2026-03-18",
+      "type": "EXPENSE",
+      "amount": "2242",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-03-19",
+      "type": "EXPENSE",
+      "amount": "571",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-03-20",
       "type": "EXPENSE",
-      "amount": "5600",
+      "amount": "459",
       "currency": "JPY",
-      "merchant": "Seiyu",
-      "notes": "Hanami food prep",
-      "category_id": "00000000-0000-7000-8002-000000000001"
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-03-21",
+      "type": "EXPENSE",
+      "amount": "1293",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-03-22",
       "type": "EXPENSE",
-      "amount": "540",
+      "amount": "1521",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-03-22",
+      "type": "EXPENSE",
+      "amount": "1348",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-03-22",
+      "type": "EXPENSE",
+      "amount": "1155",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-03-22",
+      "type": "EXPENSE",
+      "amount": "4545",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-03-22",
+      "type": "EXPENSE",
+      "amount": "3425",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
+    },
+    {
+      "date": "2026-03-23",
+      "type": "EXPENSE",
+      "amount": "746",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-03-24",
       "type": "EXPENSE",
-      "amount": "8100",
+      "amount": "2805",
       "currency": "JPY",
-      "merchant": "Amazon.co.jp",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000016"
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
     },
     {
       "date": "2026-03-25",
       "type": "INCOME",
-      "amount": "250000",
+      "amount": "320000",
       "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "March salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "EXPENSE",
+      "amount": "2035",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-03-25",
+      "type": "EXPENSE",
+      "amount": "2046",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
     },
     {
       "date": "2026-03-26",
       "type": "EXPENSE",
-      "amount": "1300",
+      "amount": "590",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
     },
     {
       "date": "2026-03-28",
       "type": "EXPENSE",
-      "amount": "2200",
+      "amount": "603",
       "currency": "JPY",
-      "merchant": "Yoshinoya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-03-28",
+      "type": "EXPENSE",
+      "amount": "1026",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-03-28",
+      "type": "EXPENSE",
+      "amount": "1263",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
     },
     {
       "date": "2026-03-29",
       "type": "EXPENSE",
-      "amount": "29.99",
-      "currency": "USD",
-      "merchant": "Adobe Creative Cloud",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "amount": "3421",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
     },
     {
-      "date": "2026-04-01",
+      "date": "2026-03-29",
       "type": "EXPENSE",
-      "amount": "80000",
+      "amount": "731",
       "currency": "JPY",
-      "merchant": "landlord",
-      "notes": "April rent",
-      "category_id": "00000000-0000-7000-8002-000000000006"
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
     },
     {
-      "date": "2026-04-01",
+      "date": "2026-03-29",
       "type": "EXPENSE",
-      "amount": "8000",
+      "amount": "567",
       "currency": "JPY",
-      "merchant": "Central Sports Club",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000013"
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-03-29",
+      "type": "EXPENSE",
+      "amount": "14840",
+      "currency": "JPY",
+      "merchant": "Yamada Denki",
+      "notes": "Yamada Denki purchase"
+    },
+    {
+      "date": "2026-03-31",
+      "type": "EXPENSE",
+      "amount": "871",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-03-31",
+      "type": "EXPENSE",
+      "amount": "2028",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-03-31",
+      "type": "EXPENSE",
+      "amount": "2552",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-04-02",
+      "type": "EXPENSE",
+      "amount": "1490",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": "Subscription"
     },
     {
       "date": "2026-04-03",
       "type": "EXPENSE",
-      "amount": "950",
+      "amount": "980",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Spotify",
+      "notes": "Subscription"
     },
     {
-      "date": "2026-04-04",
+      "date": "2026-04-05",
       "type": "EXPENSE",
-      "amount": "510",
+      "amount": "7000",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2026-04-05",
+      "type": "EXPENSE",
+      "amount": "1200",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-04-05",
+      "type": "EXPENSE",
+      "amount": "454",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-04-06",
       "type": "EXPENSE",
-      "amount": "1100",
+      "amount": "2894",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-04-06",
+      "type": "EXPENSE",
+      "amount": "931",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-04-07",
+      "type": "EXPENSE",
+      "amount": "6387",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-04-07",
+      "type": "EXPENSE",
+      "amount": "1017",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-04-07",
+      "type": "EXPENSE",
+      "amount": "232",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
     },
     {
       "date": "2026-04-08",
       "type": "EXPENSE",
-      "amount": "12000",
+      "amount": "1136",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": "Yoshinoya purchase"
+    },
+    {
+      "date": "2026-04-08",
+      "type": "EXPENSE",
+      "amount": "455",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-04-09",
+      "type": "EXPENSE",
+      "amount": "2769",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-04-09",
+      "type": "EXPENSE",
+      "amount": "750",
       "currency": "JPY",
       "merchant": "JR East",
-      "notes": "Monthly commute pass",
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-04-09",
+      "type": "EXPENSE",
+      "amount": "643",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-04-10",
       "type": "EXPENSE",
-      "amount": "4200",
+      "amount": "2075",
       "currency": "JPY",
-      "merchant": "Tokyo Electric Power",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
     },
     {
       "date": "2026-04-10",
       "type": "EXPENSE",
-      "amount": "3900",
+      "amount": "3720",
       "currency": "JPY",
-      "merchant": "Tokyo Gas",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000007"
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
+    },
+    {
+      "date": "2026-04-10",
+      "type": "EXPENSE",
+      "amount": "4394",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
       "date": "2026-04-12",
       "type": "EXPENSE",
-      "amount": "680",
+      "amount": "6021",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
     },
     {
       "date": "2026-04-13",
       "type": "EXPENSE",
-      "amount": "3100",
+      "amount": "3744",
       "currency": "JPY",
-      "merchant": "Sushiro",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-04-13",
+      "type": "EXPENSE",
+      "amount": "903",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-04-13",
+      "type": "EXPENSE",
+      "amount": "456",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-04-14",
+      "type": "EXPENSE",
+      "amount": "2219",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-04-14",
+      "type": "EXPENSE",
+      "amount": "702",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-04-14",
+      "type": "EXPENSE",
+      "amount": "1577",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-04-14",
+      "type": "EXPENSE",
+      "amount": "1027",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
     },
     {
       "date": "2026-04-15",
-      "type": "EXPENSE",
-      "amount": "1980",
-      "currency": "JPY",
-      "merchant": "Netflix",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
-    },
-    {
-      "date": "2026-04-15",
-      "type": "EXPENSE",
-      "amount": "18.99",
+      "type": "INCOME",
+      "amount": "420",
       "currency": "USD",
-      "merchant": "Amazon Prime",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000020"
+      "merchant": "Dupont Studio invoice",
+      "notes": "Freelance project"
+    },
+    {
+      "date": "2026-04-15",
+      "type": "EXPENSE",
+      "amount": "3311",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-04-15",
+      "type": "EXPENSE",
+      "amount": "573",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
     },
     {
       "date": "2026-04-16",
       "type": "EXPENSE",
-      "amount": "890",
+      "amount": "520",
       "currency": "JPY",
-      "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-04-16",
+      "type": "EXPENSE",
+      "amount": "1248",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-04-16",
+      "type": "EXPENSE",
+      "amount": "3797",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
+    },
+    {
+      "date": "2026-04-17",
+      "type": "EXPENSE",
+      "amount": "4219",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-04-17",
+      "type": "EXPENSE",
+      "amount": "1231",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
     },
     {
       "date": "2026-04-18",
       "type": "EXPENSE",
-      "amount": "4900",
+      "amount": "8862",
       "currency": "JPY",
-      "merchant": "Amazon.co.jp",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000016"
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2026-04-18",
+      "type": "EXPENSE",
+      "amount": "810",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-04-18",
+      "type": "EXPENSE",
+      "amount": "5673",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
     },
     {
       "date": "2026-04-20",
       "type": "EXPENSE",
-      "amount": "480",
+      "amount": "4172",
       "currency": "JPY",
-      "merchant": "Starbucks",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000003"
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
+    },
+    {
+      "date": "2026-04-20",
+      "type": "EXPENSE",
+      "amount": "929",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-04-20",
+      "type": "EXPENSE",
+      "amount": "1283",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-04-22",
       "type": "EXPENSE",
-      "amount": "1650",
+      "amount": "1337",
       "currency": "JPY",
-      "merchant": "Matsuya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
     },
     {
       "date": "2026-04-23",
       "type": "EXPENSE",
-      "amount": "730",
+      "amount": "652",
       "currency": "JPY",
-      "merchant": "Lawson",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-04-23",
+      "type": "EXPENSE",
+      "amount": "592",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
     },
     {
       "date": "2026-04-25",
       "type": "INCOME",
-      "amount": "250000",
+      "amount": "320000",
       "currency": "JPY",
-      "merchant": "Acme Corp",
-      "notes": "April salary",
-      "category_id": "00000000-0000-7000-8002-000000000027"
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2026-04-25",
+      "type": "EXPENSE",
+      "amount": "737",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
     },
     {
       "date": "2026-04-26",
       "type": "EXPENSE",
-      "amount": "3000",
+      "amount": "5191",
       "currency": "JPY",
-      "merchant": "Suica top-up",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000009"
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
     },
     {
       "date": "2026-04-27",
       "type": "EXPENSE",
-      "amount": "1180",
+      "amount": "890",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": "Yoshinoya purchase"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "EXPENSE",
+      "amount": "1372",
       "currency": "JPY",
       "merchant": "FamilyMart",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000005"
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "EXPENSE",
+      "amount": "583",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-04-27",
+      "type": "EXPENSE",
+      "amount": "2920",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-04-28",
+      "type": "EXPENSE",
+      "amount": "1024",
+      "currency": "JPY",
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2026-04-28",
+      "type": "EXPENSE",
+      "amount": "1252",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-04-28",
+      "type": "EXPENSE",
+      "amount": "8714",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
     },
     {
       "date": "2026-04-29",
       "type": "EXPENSE",
-      "amount": "2500",
+      "amount": "575",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-04-29",
+      "type": "EXPENSE",
+      "amount": "2553",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-04-29",
+      "type": "EXPENSE",
+      "amount": "12569",
+      "currency": "JPY",
+      "merchant": "Bic Camera",
+      "notes": "Bic Camera purchase"
+    },
+    {
+      "date": "2026-05-01",
+      "type": "EXPENSE",
+      "amount": "3092",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-05-01",
+      "type": "EXPENSE",
+      "amount": "2887",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-05-01",
+      "type": "EXPENSE",
+      "amount": "656",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-05-02",
+      "type": "EXPENSE",
+      "amount": "1490",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-05-02",
+      "type": "EXPENSE",
+      "amount": "1036",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-05-03",
+      "type": "EXPENSE",
+      "amount": "980",
+      "currency": "JPY",
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-05-04",
+      "type": "EXPENSE",
+      "amount": "2443",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-05-05",
+      "type": "EXPENSE",
+      "amount": "7000",
+      "currency": "JPY",
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2026-05-05",
+      "type": "EXPENSE",
+      "amount": "772",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-05-06",
+      "type": "EXPENSE",
+      "amount": "725",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
+    },
+    {
+      "date": "2026-05-06",
+      "type": "EXPENSE",
+      "amount": "484",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-05-06",
+      "type": "EXPENSE",
+      "amount": "2402",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-05-08",
+      "type": "EXPENSE",
+      "amount": "5006",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-05-09",
+      "type": "EXPENSE",
+      "amount": "8722",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-05-11",
+      "type": "EXPENSE",
+      "amount": "1435",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-05-12",
+      "type": "EXPENSE",
+      "amount": "4617",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2026-05-12",
+      "type": "EXPENSE",
+      "amount": "235",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-05-13",
+      "type": "EXPENSE",
+      "amount": "1570",
       "currency": "JPY",
       "merchant": "Saizeriya",
-      "notes": null,
-      "category_id": "00000000-0000-7000-8002-000000000002"
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-05-14",
+      "type": "EXPENSE",
+      "amount": "3311",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-05-15",
+      "type": "EXPENSE",
+      "amount": "2438",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-05-15",
+      "type": "EXPENSE",
+      "amount": "1792",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-05-16",
+      "type": "EXPENSE",
+      "amount": "534",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-05-18",
+      "type": "EXPENSE",
+      "amount": "7770",
+      "currency": "JPY",
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2026-05-18",
+      "type": "EXPENSE",
+      "amount": "2420",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-05-18",
+      "type": "EXPENSE",
+      "amount": "2438",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-05-19",
+      "type": "EXPENSE",
+      "amount": "3811",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-05-19",
+      "type": "EXPENSE",
+      "amount": "352",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-05-19",
+      "type": "EXPENSE",
+      "amount": "1018",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-05-19",
+      "type": "EXPENSE",
+      "amount": "797",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-05-19",
+      "type": "EXPENSE",
+      "amount": "13794",
+      "currency": "JPY",
+      "merchant": "Yamada Denki",
+      "notes": "Yamada Denki purchase"
+    },
+    {
+      "date": "2026-05-20",
+      "type": "EXPENSE",
+      "amount": "261",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-05-20",
+      "type": "EXPENSE",
+      "amount": "2555",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "EXPENSE",
+      "amount": "555",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "EXPENSE",
+      "amount": "374",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "EXPENSE",
+      "amount": "2912",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-05-22",
+      "type": "EXPENSE",
+      "amount": "4281",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-05-23",
+      "type": "EXPENSE",
+      "amount": "774",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-05-23",
+      "type": "EXPENSE",
+      "amount": "608",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-05-23",
+      "type": "EXPENSE",
+      "amount": "2156",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-05-24",
+      "type": "EXPENSE",
+      "amount": "2176",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-05-25",
+      "type": "INCOME",
+      "amount": "320000",
+      "currency": "JPY",
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2026-05-25",
+      "type": "EXPENSE",
+      "amount": "1676",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-05-25",
+      "type": "EXPENSE",
+      "amount": "1763",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-05-26",
+      "type": "EXPENSE",
+      "amount": "221",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-05-27",
+      "type": "EXPENSE",
+      "amount": "1067",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-05-27",
+      "type": "EXPENSE",
+      "amount": "530",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-05-28",
+      "type": "EXPENSE",
+      "amount": "730",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-05-28",
+      "type": "EXPENSE",
+      "amount": "3211",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-05-28",
+      "type": "EXPENSE",
+      "amount": "4662",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
+    },
+    {
+      "date": "2026-05-30",
+      "type": "EXPENSE",
+      "amount": "2022",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "EXPENSE",
+      "amount": "699",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "EXPENSE",
+      "amount": "646",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "EXPENSE",
+      "amount": "726",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "EXPENSE",
+      "amount": "937",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "EXPENSE",
+      "amount": "656",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-06-01",
+      "type": "EXPENSE",
+      "amount": "6432",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "EXPENSE",
+      "amount": "1490",
+      "currency": "JPY",
+      "merchant": "Netflix",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "EXPENSE",
+      "amount": "407",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "EXPENSE",
+      "amount": "649",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "EXPENSE",
+      "amount": "2237",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-06-02",
+      "type": "EXPENSE",
+      "amount": "1879",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "EXPENSE",
+      "amount": "980",
+      "currency": "JPY",
+      "merchant": "Spotify",
+      "notes": "Subscription"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "EXPENSE",
+      "amount": "1888",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "EXPENSE",
+      "amount": "280",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-06-03",
+      "type": "EXPENSE",
+      "amount": "3375",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "EXPENSE",
+      "amount": "1888",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "EXPENSE",
+      "amount": "1997",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "EXPENSE",
+      "amount": "386",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "EXPENSE",
+      "amount": "413",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-04",
+      "type": "EXPENSE",
+      "amount": "1442",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-06-05",
+      "type": "EXPENSE",
+      "amount": "7000",
+      "currency": "JPY",
+      "merchant": "Anytime Fitness gym",
+      "notes": "Membership"
+    },
+    {
+      "date": "2026-06-05",
+      "type": "EXPENSE",
+      "amount": "596",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-06-06",
+      "type": "EXPENSE",
+      "amount": "3584",
+      "currency": "JPY",
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
+    },
+    {
+      "date": "2026-06-08",
+      "type": "EXPENSE",
+      "amount": "564",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-08",
+      "type": "EXPENSE",
+      "amount": "477",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-06-09",
+      "type": "EXPENSE",
+      "amount": "5105",
+      "currency": "JPY",
+      "merchant": "Aeon",
+      "notes": "Aeon purchase"
+    },
+    {
+      "date": "2026-06-09",
+      "type": "EXPENSE",
+      "amount": "120388",
+      "currency": "JPY",
+      "merchant": "Bic Camera",
+      "notes": "Bic Camera purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "876",
+      "currency": "JPY",
+      "merchant": "Yoshinoya",
+      "notes": "Yoshinoya purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "1414",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "527",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "1007",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "890",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "454",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "EXPENSE",
+      "amount": "1128",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-06-12",
+      "type": "EXPENSE",
+      "amount": "4244",
+      "currency": "JPY",
+      "merchant": "Tokyo Gas",
+      "notes": "Gas bill"
+    },
+    {
+      "date": "2026-06-12",
+      "type": "EXPENSE",
+      "amount": "1958",
+      "currency": "JPY",
+      "merchant": "Seiyu",
+      "notes": "Seiyu purchase"
+    },
+    {
+      "date": "2026-06-12",
+      "type": "EXPENSE",
+      "amount": "1385",
+      "currency": "JPY",
+      "merchant": "Ramen Ichiran",
+      "notes": "Ramen Ichiran purchase"
+    },
+    {
+      "date": "2026-06-13",
+      "type": "EXPENSE",
+      "amount": "1202",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-06-14",
+      "type": "EXPENSE",
+      "amount": "6202",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-06-14",
+      "type": "EXPENSE",
+      "amount": "761",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-06-14",
+      "type": "EXPENSE",
+      "amount": "1670",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-06-15",
+      "type": "INCOME",
+      "amount": "420",
+      "currency": "USD",
+      "merchant": "Dupont Studio invoice",
+      "notes": "Freelance project"
+    },
+    {
+      "date": "2026-06-15",
+      "type": "EXPENSE",
+      "amount": "554",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-15",
+      "type": "EXPENSE",
+      "amount": "1154",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-06-15",
+      "type": "EXPENSE",
+      "amount": "1858",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-06-16",
+      "type": "EXPENSE",
+      "amount": "6220",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-06-16",
+      "type": "EXPENSE",
+      "amount": "2033",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-16",
+      "type": "EXPENSE",
+      "amount": "417",
+      "currency": "JPY",
+      "merchant": "Doutor",
+      "notes": "Doutor purchase"
+    },
+    {
+      "date": "2026-06-18",
+      "type": "EXPENSE",
+      "amount": "8194",
+      "currency": "JPY",
+      "merchant": "TEPCO electric",
+      "notes": "Electricity"
+    },
+    {
+      "date": "2026-06-18",
+      "type": "EXPENSE",
+      "amount": "4154",
+      "currency": "JPY",
+      "merchant": "Izakaya Tora",
+      "notes": "Izakaya Tora purchase"
+    },
+    {
+      "date": "2026-06-18",
+      "type": "EXPENSE",
+      "amount": "714",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-06-19",
+      "type": "EXPENSE",
+      "amount": "373",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-06-19",
+      "type": "EXPENSE",
+      "amount": "538",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-06-20",
+      "type": "EXPENSE",
+      "amount": "794",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-06-20",
+      "type": "EXPENSE",
+      "amount": "712",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-06-20",
+      "type": "EXPENSE",
+      "amount": "440",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-06-20",
+      "type": "EXPENSE",
+      "amount": "2433",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-06-20",
+      "type": "EXPENSE",
+      "amount": "3251",
+      "currency": "JPY",
+      "merchant": "Rakuten",
+      "notes": "Rakuten purchase"
+    },
+    {
+      "date": "2026-06-21",
+      "type": "EXPENSE",
+      "amount": "964",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-06-21",
+      "type": "EXPENSE",
+      "amount": "1001",
+      "currency": "JPY",
+      "merchant": "Blue Bottle Coffee",
+      "notes": "Blue Bottle Coffee purchase"
+    },
+    {
+      "date": "2026-06-21",
+      "type": "EXPENSE",
+      "amount": "732",
+      "currency": "JPY",
+      "merchant": "Lawson",
+      "notes": "Lawson purchase"
+    },
+    {
+      "date": "2026-06-21",
+      "type": "EXPENSE",
+      "amount": "1810",
+      "currency": "JPY",
+      "merchant": "Uber",
+      "notes": "Uber purchase"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "EXPENSE",
+      "amount": "2091",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "EXPENSE",
+      "amount": "416",
+      "currency": "JPY",
+      "merchant": "FamilyMart",
+      "notes": "FamilyMart purchase"
+    },
+    {
+      "date": "2026-06-22",
+      "type": "EXPENSE",
+      "amount": "539",
+      "currency": "JPY",
+      "merchant": "JR East",
+      "notes": "JR East purchase"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "EXPENSE",
+      "amount": "4463",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "EXPENSE",
+      "amount": "824",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "EXPENSE",
+      "amount": "1829",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "EXPENSE",
+      "amount": "2289",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-06-23",
+      "type": "EXPENSE",
+      "amount": "130857",
+      "currency": "JPY",
+      "merchant": "Bic Camera",
+      "notes": "Bic Camera purchase"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "EXPENSE",
+      "amount": "3083",
+      "currency": "JPY",
+      "merchant": "Sushiro",
+      "notes": "Sushiro purchase"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "EXPENSE",
+      "amount": "2107",
+      "currency": "JPY",
+      "merchant": "Saizeriya",
+      "notes": "Saizeriya purchase"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "EXPENSE",
+      "amount": "483",
+      "currency": "JPY",
+      "merchant": "7-Eleven",
+      "notes": "7-Eleven purchase"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "INCOME",
+      "amount": "320000",
+      "currency": "JPY",
+      "merchant": "Acme Corp payroll",
+      "notes": "Monthly salary"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "EXPENSE",
+      "amount": "4168",
+      "currency": "JPY",
+      "merchant": "Safeway",
+      "notes": "Safeway purchase"
+    },
+    {
+      "date": "2026-06-25",
+      "type": "EXPENSE",
+      "amount": "7507",
+      "currency": "JPY",
+      "merchant": "Gift Shop Loft",
+      "notes": "Gift Shop Loft purchase"
+    },
+    {
+      "date": "2026-06-26",
+      "type": "EXPENSE",
+      "amount": "708",
+      "currency": "JPY",
+      "merchant": "Matsuya",
+      "notes": "Matsuya purchase"
+    },
+    {
+      "date": "2026-06-26",
+      "type": "EXPENSE",
+      "amount": "2810",
+      "currency": "JPY",
+      "merchant": "Suica top-up",
+      "notes": "Suica top-up purchase"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "EXPENSE",
+      "amount": "619",
+      "currency": "JPY",
+      "merchant": "Starbucks",
+      "notes": "Starbucks purchase"
+    },
+    {
+      "date": "2026-06-27",
+      "type": "EXPENSE",
+      "amount": "1191",
+      "currency": "JPY",
+      "merchant": "Nihon Kotsu Taxi",
+      "notes": "Nihon Kotsu Taxi purchase"
+    },
+    {
+      "date": "2026-06-28",
+      "type": "EXPENSE",
+      "amount": "432",
+      "currency": "JPY",
+      "merchant": "Tokyo Metro",
+      "notes": "Tokyo Metro purchase"
+    },
+    {
+      "date": "2026-06-29",
+      "type": "EXPENSE",
+      "amount": "5039",
+      "currency": "JPY",
+      "merchant": "Amazon.co.jp",
+      "notes": "Amazon.co.jp purchase"
+    }
+  ],
+  "recurring": [
+    {
+      "amount": "80000",
+      "currency": "JPY",
+      "type": "EXPENSE",
+      "merchant": "landlord",
+      "notes": "Monthly rent",
+      "recurrence": "monthly",
+      "day_of_month": 1,
+      "start_date": "2025-12-19"
+    },
+    {
+      "amount": "2480",
+      "currency": "JPY",
+      "type": "EXPENSE",
+      "merchant": "Adobe CC",
+      "notes": "Creative Cloud subscription",
+      "recurrence": "monthly",
+      "day_of_month": 8,
+      "start_date": "2025-12-19"
     }
   ]
 }

@@ -13,7 +13,6 @@ from app.domain.services.behavioral_shift_detector import (
     DetectedShift,
 )
 from app.domain.services.monthly_aggregator import MonthlyAggregation
-from app.domain.services.portrait_aggregator import compute_window_averages
 
 # ---------------------------------------------------------------------------
 # Shared strategies
@@ -181,31 +180,3 @@ def test_is_alertworthy_high_severity_floor(
         assert not result, (
             f"Expected NOT alertworthy for {currency} abs_change={abs_change} < floor={floor}"
         )
-
-
-# ---------------------------------------------------------------------------
-# Group 3: compute_window_averages
-# ---------------------------------------------------------------------------
-
-
-@given(
-    months=st.lists(
-        st.lists(monthly_aggregation(), min_size=0, max_size=4),
-        min_size=0,
-        max_size=6,
-    )
-)
-@settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow])
-def test_compute_window_averages_returns_dict(
-    months: list[list[MonthlyAggregation]],
-) -> None:
-    """compute_window_averages never raises and always returns a dict."""
-    result = compute_window_averages(months)
-    assert isinstance(result, dict)
-    # Each value is a dict mapping category label -> Decimal average
-    for ccy, cat_map in result.items():
-        assert isinstance(ccy, str)
-        assert isinstance(cat_map, dict)
-        for label, avg in cat_map.items():
-            assert isinstance(label, str)
-            assert isinstance(avg, Decimal)

@@ -7,7 +7,6 @@ root_packages =
 # not third-party packages; these notes record intentional exceptions for future reviewers):
 #
 # opentelemetry in application layer (bugs.md B37 — accepted exception, 2026-06-12):
-#   app/application/insights/embedding_pipeline.py
 #   app/application/insights/use_cases/_process_insight_steps.py
 #   app/application/insights/use_cases/process_insight.py
 #
@@ -33,9 +32,7 @@ modules =
     app.main.api
     app.main.outbox
     app.main.insight
-    app.main.portrait
     app.main.scheduler
-    app.main.transaction
 
 [importlinter:contract:inbound-outbound-siblings]
 name = Inbound and outbound do not import each other
@@ -79,6 +76,3 @@ modules =
     app.outbound.adapters.sqla.search
     app.outbound.adapters.sqla.alerts
     app.outbound.adapters.sqla.chat
-ignore_imports =
-    app.outbound.adapters.sqla.insights.work_unit_factory -> app.outbound.adapters.sqla.alerts.alert_writer
-    app.outbound.adapters.sqla.chat.work_unit_factory -> app.outbound.adapters.sqla.insights.chunk_retriever

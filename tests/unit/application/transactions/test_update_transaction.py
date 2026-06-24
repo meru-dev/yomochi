@@ -18,7 +18,6 @@ from app.domain.value_objects.money import Currency, Money
 from tests.fakes.repositories import (
     FakeAuditLog,
     FakeCategoryListReader,
-    FakeOutboxRepository,
     FakeTransactionRepository,
 )
 
@@ -51,15 +50,9 @@ def _make_transaction(user_id: UserId, tx_id: TransactionId, date_: date) -> Tra
     )
 
 
-def _make_uc(
-    repo: FakeTransactionRepository, outbox: FakeOutboxRepository
-) -> UpdateTransactionUseCase:
-    dirty_repo = AsyncMock()
-    dirty_repo.mark_dirty = AsyncMock()
+def _make_uc(repo: FakeTransactionRepository) -> UpdateTransactionUseCase:
     return UpdateTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
-        dirty_period_marker=dirty_repo,
         category_list_reader=FakeCategoryListReader(),
         audit_log=FakeAuditLog(),
     )
@@ -67,8 +60,7 @@ def _make_uc(
 
 async def test_updates_merchant() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
     user = UserId(uuid.uuid4())
     tx = _make_tx(user)
     await repo.save(tx)
@@ -86,13 +78,11 @@ async def test_updates_merchant() -> None:
     assert updated is not None
     assert updated.merchant == "New merchant"
     assert updated.updated_at is not None
-    assert outbox.events[0].event_type == "TransactionUpdated"
 
 
 async def test_clears_nullable_field() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
     user = UserId(uuid.uuid4())
     tx = _make_tx(user)
     await repo.save(tx)
@@ -113,8 +103,7 @@ async def test_clears_nullable_field() -> None:
 
 async def test_raises_if_not_found() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
 
     with pytest.raises(TransactionNotFoundError):
         await uc(
@@ -129,8 +118,7 @@ async def test_raises_if_not_found() -> None:
 
 async def test_cross_user_isolation() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
     owner = UserId(uuid.uuid4())
     attacker = UserId(uuid.uuid4())
     tx = _make_tx(owner)
@@ -148,7 +136,8 @@ async def test_cross_user_isolation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_transaction_marks_period_dirty_on_month_change():
+async def test_update_transaction_persists_date_change():
+    """A date change is applied and saved (no dirty-period side effects remain)."""
     user_id = UserId(uuid_utils.uuid7())
     tx_id = TransactionId(uuid_utils.uuid7())
     tx = _make_transaction(user_id, tx_id, date(2025, 1, 15))
@@ -157,16 +146,8 @@ async def test_update_transaction_marks_period_dirty_on_month_change():
     tx_repo.get_by_id = AsyncMock(return_value=tx)
     tx_repo.save = AsyncMock()
 
-    outbox_repo = AsyncMock()
-    outbox_repo.append = AsyncMock()
-
-    dirty_repo = AsyncMock()
-    dirty_repo.mark_dirty = AsyncMock()
-
     use_case = UpdateTransactionUseCase(
         transaction_repo=tx_repo,
-        outbox_repo=outbox_repo,
-        dirty_period_marker=dirty_repo,
         category_list_reader=FakeCategoryListReader(),
         audit_log=FakeAuditLog(),
     )
@@ -179,42 +160,8 @@ async def test_update_transaction_marks_period_dirty_on_month_change():
     )
     await use_case(cmd)
 
-    dirty_repo.mark_dirty.assert_awaited_once_with(user_id, 2025, 3)
-
-
-@pytest.mark.asyncio
-async def test_update_transaction_no_dirty_when_same_month():
-    user_id = UserId(uuid_utils.uuid7())
-    tx_id = TransactionId(uuid_utils.uuid7())
-    tx = _make_transaction(user_id, tx_id, date(2025, 1, 15))
-
-    tx_repo = AsyncMock()
-    tx_repo.get_by_id = AsyncMock(return_value=tx)
-    tx_repo.save = AsyncMock()
-
-    outbox_repo = AsyncMock()
-    outbox_repo.append = AsyncMock()
-
-    dirty_repo = AsyncMock()
-    dirty_repo.mark_dirty = AsyncMock()
-
-    use_case = UpdateTransactionUseCase(
-        transaction_repo=tx_repo,
-        outbox_repo=outbox_repo,
-        dirty_period_marker=dirty_repo,
-        category_list_reader=FakeCategoryListReader(),
-        audit_log=FakeAuditLog(),
-    )
-
-    cmd = UpdateTransactionCommand(
-        user_id=user_id,
-        transaction_id=str(tx_id.value),
-        fields_to_update=frozenset({"date"}),
-        date_=date(2025, 1, 25),  # same month
-    )
-    await use_case(cmd)
-
-    dirty_repo.mark_dirty.assert_not_awaited()
+    tx_repo.save.assert_awaited_once()
+    assert tx.date == date(2025, 3, 10)
 
 
 async def test_update_raises_when_category_is_group() -> None:
@@ -222,7 +169,6 @@ async def test_update_raises_when_category_is_group() -> None:
     from datetime import UTC
     from datetime import datetime as _datetime
     from decimal import Decimal
-    from unittest.mock import AsyncMock, MagicMock
 
     from app.application.transactions.ports.category_list_reader import CategoryListItem
     from app.application.transactions.use_cases.update_transaction import UpdateTransactionCommand
@@ -233,7 +179,6 @@ async def test_update_raises_when_category_is_group() -> None:
     from app.domain.value_objects.money import Currency, Money
     from tests.fakes.repositories import (
         FakeCategoryListReader,
-        FakeOutboxRepository,
         FakeTransactionRepository,
     )
 
@@ -242,17 +187,12 @@ async def test_update_raises_when_category_is_group() -> None:
     reader.seed([CategoryListItem(id_=group_id, name="Food & Drink", parent_id=None)])
 
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    dirty = MagicMock()
-    dirty.mark_dirty = AsyncMock(return_value=None)
 
     from app.application.transactions.use_cases.update_transaction import UpdateTransactionUseCase
     from tests.fakes.repositories import FakeAuditLog as _FakeAuditLog
 
     uc = UpdateTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
-        dirty_period_marker=dirty,
         category_list_reader=reader,
         audit_log=_FakeAuditLog(),
     )

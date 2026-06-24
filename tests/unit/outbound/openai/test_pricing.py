@@ -25,22 +25,6 @@ def test_gpt4o_combined() -> None:
     assert abs(cost - 12.500) < 1e-6
 
 
-def test_embedding_model() -> None:
-    cost = estimate_cost("text-embedding-3-small", prompt_tokens=1_000_000, completion_tokens=0)
-    assert abs(cost - 0.020) < 1e-9
-
-
-def test_embedding_completion_tokens_ignored() -> None:
-    # Embedding responses have no completion tokens — cost should be identical
-    cost_no_completion = estimate_cost(
-        "text-embedding-3-small", prompt_tokens=500_000, completion_tokens=0
-    )
-    cost_with_phantom = estimate_cost(
-        "text-embedding-3-small", prompt_tokens=500_000, completion_tokens=9999
-    )
-    assert abs(cost_no_completion - cost_with_phantom) < 1e-9
-
-
 def test_unknown_model_returns_zero() -> None:
     cost = estimate_cost("unknown-model-xyz", prompt_tokens=1_000_000, completion_tokens=500_000)
     assert cost == 0.0
@@ -50,7 +34,7 @@ def test_zero_tokens_returns_zero() -> None:
     assert estimate_cost("gpt-4o-mini", prompt_tokens=0, completion_tokens=0) == 0.0
 
 
-@pytest.mark.parametrize("model", ["gpt-4o-mini", "gpt-4o", "text-embedding-3-small"])
+@pytest.mark.parametrize("model", ["gpt-4o-mini", "gpt-4o"])
 def test_small_token_count_positive(model: str) -> None:
     cost = estimate_cost(model, prompt_tokens=100, completion_tokens=50)
     assert cost >= 0.0
