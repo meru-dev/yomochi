@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useId, useState } from "react"
 import type { components } from "@/lib/api/schema"
 import { ChevronDownIcon } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
@@ -27,6 +27,7 @@ interface Props {
 export function CategoryCombobox({ value, onChange, groups, allCategories, className }: Props) {
   const [open, setOpen] = useState(false)
   const selectedName = allCategories.find(c => c.id === value)?.name
+  const contentId = useId()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -34,6 +35,10 @@ export function CategoryCombobox({ value, onChange, groups, allCategories, class
         render={
           <button
             type="button"
+            role="combobox"
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls={contentId}
             className={cn(
               "flex w-full items-center justify-between gap-2 h-10 px-3 text-sm border rounded-lg transition-colors bg-transparent",
               className
@@ -46,7 +51,7 @@ export function CategoryCombobox({ value, onChange, groups, allCategories, class
         </span>
         <ChevronDownIcon className="size-4 text-[var(--text-3)] shrink-0 pointer-events-none" />
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="start" sideOffset={4} className="w-(--anchor-width) p-0">
+      <PopoverContent id={contentId} side="bottom" align="start" sideOffset={4} className="w-(--anchor-width) p-0">
         <Command>
           <CommandInput placeholder="Search category…" />
           <CommandList>

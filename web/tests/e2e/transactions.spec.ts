@@ -24,8 +24,10 @@ test.describe("Transaction edit and delete", () => {
     // Toast with undo appears
     await expect(page.getByText("✓ Deleted.")).toBeVisible()
 
-    // Click undo — row reappears
-    await page.getByRole("button", { name: /undo/i }).click()
+    // Click undo — scope to the delete toast, since the earlier "add" toast
+    // (also with its own Undo) may still be alive and stacked above it.
+    const deleteToast = page.getByText("✓ Deleted.", { exact: true }).locator("xpath=..")
+    await deleteToast.getByRole("button", { name: /undo/i }).click()
     await expect(page.getByText("Dentist").first()).toBeVisible({ timeout: 8000 })
   })
 

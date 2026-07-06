@@ -50,7 +50,7 @@ test.describe("Auth boundary clears cached data", () => {
     // ── User B: register fresh on the same browser/Playwright page ────────
     await page.goto("/register")
     await page.getByLabel("Email").fill(b)
-    await page.getByLabel("Password").fill(PASSWORD)
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD)
     await page.getByLabel("Confirm password").fill(PASSWORD)
     await page.getByRole("button", { name: /create account/i }).click()
     await expect(page).toHaveURL("/dashboard", { timeout: 10_000 })
