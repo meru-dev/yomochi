@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 
@@ -162,16 +164,18 @@ async def test_trend_default_granularity_is_month(client: AsyncClient) -> None:
 
 async def test_summary_excludes_future_transactions_in_current_month(client: AsyncClient) -> None:
     await register_and_login(client, email="rep-future-sum@example.com", password=_PASS)
-    # Past transaction in current month (June 2026) - should be included
+    today = datetime.now(UTC).date()
+    tomorrow = today + timedelta(days=1)
+    # Past/present transaction in the current month - should be included
     await create_transaction(
-        client, amount="100.00", currency="USD", date="2026-06-01", type_="expense"
+        client, amount="100.00", currency="USD", date=today.isoformat(), type_="expense"
     )
-    # Future transaction in current month - should be excluded
+    # Future transaction - should be excluded (whether it lands in this month or next)
     await create_transaction(
-        client, amount="500.00", currency="USD", date="2026-06-30", type_="expense"
+        client, amount="500.00", currency="USD", date=tomorrow.isoformat(), type_="expense"
     )
 
-    resp = await client.get("/api/v1/reports/summary?year=2026&month=6")
+    resp = await client.get(f"/api/v1/reports/summary?year={today.year}&month={today.month}")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     usd_expenses = next((e for e in data["expenses"] if e["currency"] == "USD"), None)
@@ -183,21 +187,24 @@ async def test_summary_excludes_future_transactions_in_current_month(client: Asy
 
 async def test_trend_excludes_future_transactions(client: AsyncClient) -> None:
     await register_and_login(client, email="rep-future-trend@example.com", password=_PASS)
-    # Past transaction in current month (June 2026) - should be included
+    today = datetime.now(UTC).date()
+    tomorrow = today + timedelta(days=1)
+    # Past/present transaction in the current month - should be included
     await create_transaction(
-        client, amount="100.00", currency="USD", date="2026-06-01", type_="expense"
+        client, amount="100.00", currency="USD", date=today.isoformat(), type_="expense"
     )
     # Future transaction - should be excluded
     await create_transaction(
-        client, amount="500.00", currency="USD", date="2026-06-30", type_="expense"
+        client, amount="500.00", currency="USD", date=tomorrow.isoformat(), type_="expense"
     )
 
     resp = await client.get("/api/v1/reports/trend?currency=USD&months=6")
     assert resp.status_code == 200, resp.text
-    jun_point = next((p for p in resp.json()["points"] if p["month"] == "2026-06"), None)
-    assert jun_point is not None
+    current_month_key = f"{today.year:04d}-{today.month:02d}"
+    month_point = next((p for p in resp.json()["points"] if p["month"] == current_month_key), None)
+    assert month_point is not None
     # Should only count the past transaction (100), not the future one (500)
-    assert float(jun_point["total"]) == pytest.approx(100.0)
+    assert float(month_point["total"]) == pytest.approx(100.0)
 
 
 async def test_summary_includes_all_transactions_in_past_months(client: AsyncClient) -> None:
