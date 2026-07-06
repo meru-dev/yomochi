@@ -52,7 +52,6 @@ class ChatQueryUseCase:
         self._chat_tools = chat_tools
 
     async def __call__(self, command: ChatQueryCommand) -> ChatQueryResult:
-        """Function-calling path: no embedder, no ChunkRetriever — tools only."""
         await self._budget.check(command.user_id)
 
         # User turn is stamped when request handling begins.

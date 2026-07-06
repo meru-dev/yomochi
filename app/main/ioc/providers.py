@@ -248,14 +248,6 @@ class RequestProvider(Provider):
 
 
 class CommonAdaptersProvider(Provider):
-    """Cross-cutting infra used by more than one bounded context.
-
-    - Outbox + Flusher (transactional outbox machinery)
-    - OpenAIGateway (shared HTTP client + circuit breaker, used by chat/search/ingestion)
-    - QuotaCheck (used by insights request use case, plan-bound)
-    - IdentityContext + CookieManager (request identity resolution)
-    """
-
     scope = Scope.REQUEST
 
     outbox_repo = provide(SqlaOutboxRepository, provides=OutboxRepository)
@@ -313,8 +305,6 @@ class CommonAdaptersProvider(Provider):
 
 
 class UsersAdaptersProvider(Provider):
-    """Users context: identity persistence + auth primitives + use cases."""
-
     scope = Scope.REQUEST
 
     user_repo = provide(SqlaUserRepository, provides=UserRepository)
@@ -346,7 +336,7 @@ class UsersAdaptersProvider(Provider):
                 "stdout_mailer_in_use",
                 note="StdoutMailer is active in a non-debug environment. "
                 "Password-reset emails are written to the log, not delivered. "
-                "Set SMTP_HOST (feature F16) before going to production.",
+                "Set SMTP_HOST before going to production.",
             )
         return StdoutMailer()
 
@@ -710,11 +700,7 @@ class IngestionAdaptersProvider(Provider):
 
 
 def all_providers() -> tuple[Provider, ...]:
-    """Return all Dishka providers for the HTTP API.
-
-    Grouped: framework/infra → common cross-cutting → per-bounded-context.
-    Dishka resolves across providers, so order is for readability only.
-    """
+    # Dishka resolves across providers, so order is for readability only.
     return (
         # Framework / infra
         InfraProvider(),

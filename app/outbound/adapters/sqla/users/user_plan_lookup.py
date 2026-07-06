@@ -9,8 +9,6 @@ from app.outbound.persistence_sqla.mappings.user import users
 
 
 class SqlaUserPlanLookup:
-    """Lightweight read-only plan resolver — single column, no entity hydration."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

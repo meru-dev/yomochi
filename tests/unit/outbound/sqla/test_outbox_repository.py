@@ -38,7 +38,6 @@ def _make_event() -> OutboxEvent:
 
 @pytest.mark.asyncio
 async def test_outbox_append_sets_uuid7_id() -> None:
-    """append() must supply a UUIDv7 (version 7) for outbox_events.id."""
     session = AsyncMock()
     session.execute = AsyncMock()
 

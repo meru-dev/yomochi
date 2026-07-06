@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from app.outbound.adapters.openai._gateway.gateway import OpenAIGateway
 
-# Endpoint classes with independent rate-limit + circuit-breaker buckets (F19).
+# Endpoint classes with independent rate-limit + circuit-breaker buckets.
 _ENDPOINTS = ("chat", "vision", "parse")
 
 

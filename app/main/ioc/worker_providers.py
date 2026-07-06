@@ -141,9 +141,6 @@ class WorkerInfraProvider(Provider):
 
 
 class WorkerAdaptersBaseProvider(Provider):
-    """Adapters every Kafka-driven worker needs: idempotency store, DLQ publisher,
-    metrics recorder. Requires Redis + KafkaBroker in the container context."""
-
     scope = Scope.APP
 
     kafka_settings = from_context(provides=KafkaSettings, scope=Scope.APP)
@@ -159,8 +156,6 @@ class WorkerAdaptersBaseProvider(Provider):
 
 
 class WorkerAdaptersInsightProvider(Provider):
-    """OpenAI insight chat client. Used only by insight-worker."""
-
     scope = Scope.APP
 
     @provide(scope=Scope.APP)
@@ -177,13 +172,12 @@ class WorkerAdaptersInsightProvider(Provider):
 
     @provide(scope=Scope.APP)
     def ai_insight_client_port(self, impl: OpenAIInsightClient) -> AIInsightClient:
-        # F2: wrap the OpenAI client so a primary-provider outage degrades to a
+        # Wrap the OpenAI client so a primary-provider outage degrades to a
         # vendor-free deterministic summary instead of failing into the DLQ.
         return FallbackAIInsightClient(primary=impl, fallback=DeterministicInsightClient())
 
     @provide(scope=Scope.APP)
     def insight_worker_config(self) -> InsightWorkerConfig:
-        """Load InsightWorkerSettings from env and convert to the domain config object."""
         s = InsightWorkerSettings()
         return InsightWorkerConfig(
             min_transactions_for_insight=s.min_transactions_for_insight,
@@ -194,8 +188,6 @@ class WorkerAdaptersInsightProvider(Provider):
 
 
 class InsightPersistenceProvider(Provider):
-    """Insight repo set used by the deterministic process_insight path."""
-
     scope = Scope.REQUEST
 
     insight_repo = provide(SqlaInsightRepository, provides=InsightRepository)
@@ -204,8 +196,6 @@ class InsightPersistenceProvider(Provider):
 
 
 class InsightUseCasesProvider(Provider):
-    """ProcessInsightUseCase + its work-unit factory."""
-
     @provide(scope=Scope.APP)
     def insight_work_unit_factory(
         self, session_factory: async_sessionmaker[AsyncSession]

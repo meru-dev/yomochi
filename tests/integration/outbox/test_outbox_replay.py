@@ -1,4 +1,4 @@
-"""F17: requeue quarantined (FAILED) outbox rows back to PENDING for replay."""
+"""Requeue quarantined (FAILED) outbox rows back to PENDING for replay."""
 
 import uuid
 from datetime import UTC, datetime, timedelta

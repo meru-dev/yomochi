@@ -94,7 +94,7 @@ def _make_gateway(mock_openai_client: MagicMock) -> MagicMock:
 
 
 async def test_generate_records_cached_tokens_and_discounts_cost() -> None:
-    """F1: cached prompt tokens increment the cache counter and discount cost."""
+    """Cached prompt tokens increment the cache counter and discount cost."""
     prompt_tokens, completion_tokens, cached_tokens = 1200, 300, 1024
     model = "gpt-4o-mini"
 
@@ -127,7 +127,7 @@ async def test_generate_records_cached_tokens_and_discounts_cost() -> None:
 
 
 async def test_generate_forwards_prompt_cache_key() -> None:
-    """F1: prompt_cache_key is passed through to the OpenAI parse call."""
+    """Prompt_cache_key is passed through to the OpenAI parse call."""
     mock_openai_client = _make_mock_client(100, 10)
     parse_mock = mock_openai_client.beta.chat.completions.parse
     client = OpenAIInsightClient(

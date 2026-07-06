@@ -27,7 +27,7 @@ from app.outbound.observability.prometheus import (
 
 logger = structlog.get_logger(__name__)
 
-# Per-endpoint-class rate-limit + circuit-breaker buckets (F19).
+# Per-endpoint-class rate-limit + circuit-breaker buckets.
 Endpoint = Literal["chat", "vision", "parse"]
 
 T = TypeVar("T")

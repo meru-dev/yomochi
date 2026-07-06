@@ -12,14 +12,6 @@ _SUBJECT = "Reset your Yomochi password"
 
 
 class SmtpMailer:
-    """Delivers password-reset emails over SMTP via aiosmtplib.
-
-    Provider-agnostic: works against SES, Resend, Gmail, or any SMTP relay.
-    There is no frontend reset-URL base in this repo, so the email body carries
-    the raw token and expiry (mirroring StdoutMailer); a clickable link is a
-    separate future feature.
-    """
-
     def __init__(
         self,
         *,

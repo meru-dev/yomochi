@@ -109,7 +109,6 @@ async def test_delete_rule_returns_204(client: AsyncClient) -> None:
 
 
 async def test_cross_user_isolation(client: AsyncClient) -> None:
-    """User A cannot access User B's rule."""
     await register_and_login(client, email="recurring_a@test.com")
     create = await client.post(
         "/api/v1/recurring-rules",

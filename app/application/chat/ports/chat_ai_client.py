@@ -18,7 +18,7 @@ class ChatToolsRequest:
     tool_executor: ToolExecutor
     today: date | None = None
     # Stable per-user key the AI adapter MAY use for provider-side cache routing
-    # (F1) — provider-neutral; the OpenAI adapter maps it to prompt_cache_key.
+    # provider-neutral; the OpenAI adapter maps it to prompt_cache_key.
     cache_key: str | None = None
 
 

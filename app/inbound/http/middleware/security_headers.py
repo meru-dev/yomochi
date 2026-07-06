@@ -35,8 +35,6 @@ _DOCS_PATHS = frozenset({"/docs", "/redoc", "/openapi.json"})
 
 
 class SecurityHeadersMiddleware:
-    """Pure ASGI middleware that injects static security headers on responses."""
-
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 

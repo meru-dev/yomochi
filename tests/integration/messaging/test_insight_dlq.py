@@ -138,7 +138,6 @@ async def test_no_double_dlq_on_redelivery_after_park(redis_url: str) -> None:
 
 
 async def test_success_path_marks_processed_without_dlq(redis_url: str) -> None:
-    """Clean handler run marks the event processed and never touches the DLQ."""
     redis = Redis.from_url(redis_url, decode_responses=False)
     store = RedisConsumerIdempotencyStore(redis)
     dlq_publisher = _RecordingPublisher()

@@ -1,4 +1,4 @@
-"""F17: the replay_outbox CLI must refuse to act without an explicit selector."""
+"""The replay_outbox CLI must refuse to act without an explicit selector."""
 
 from unittest.mock import MagicMock, patch
 

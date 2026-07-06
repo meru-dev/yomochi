@@ -8,11 +8,6 @@ from app.outbound.persistence_sqla.mappings.transaction import transactions
 
 
 class SqlaTransactionReader:
-    """Consumer-owned read port for the insights context.
-
-    Reads directly from transactions_table per CODING_STANDARDS §3.4 Pattern 1.
-    """
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

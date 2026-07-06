@@ -8,7 +8,6 @@ REGISTRY = CollectorRegistry(auto_describe=True)
 
 
 def make_metrics_app() -> Any:
-    """Return a Prometheus metrics ASGI app for mounting at /metrics."""
     return make_asgi_app(registry=REGISTRY)
 
 
@@ -44,8 +43,7 @@ consumer_dlq_events_total = Counter(
 # Insights — M4
 insight_fallback_total = Counter(
     "insight_fallback_total",
-    "Insight generations served by the deterministic fallback after a primary "
-    "LLM-provider failure (F2)",
+    "Insight generations served by the deterministic fallback after a primary LLM-provider failure",
     labelnames=["reason"],  # rate_limited | timeout | unavailable | invalid_request | error
     registry=REGISTRY,
 )
@@ -96,7 +94,7 @@ openai_limiter_waiting = Gauge(
 
 openai_limiter_rejected_total = Counter(
     "openai_limiter_rejected_total",
-    "OpenAI calls rejected because the per-endpoint limiter waiter queue was full (F19)",
+    "OpenAI calls rejected because the per-endpoint limiter waiter queue was full",
     labelnames=["endpoint"],  # chat | vision | parse
     registry=REGISTRY,
 )
@@ -108,7 +106,7 @@ openai_cost_usd_total = Counter(
     registry=REGISTRY,
 )
 
-# Prompt-caching (F1) — cached_tokens is the subset of prompt_tokens served from
+# Prompt-caching — cached_tokens is the subset of prompt_tokens served from
 # OpenAI's automatic prompt cache (≥1024-token stable prefix). Cache-hit rate =
 # openai_cached_tokens_total / openai_tokens_total{direction="prompt"}.
 openai_cached_tokens_total = Counter(
@@ -203,8 +201,6 @@ def http_requests_metric() -> Callable[[Info], None]:
 
 
 def http_request_duration_metric() -> Callable[[Info], None]:
-    """Instrumentator closure for the request duration histogram."""
-
     def instrumentation(info: Info) -> None:
         route = info.modified_handler or "unknown"
         http_request_duration_seconds.labels(info.method, route, _classify_route(route)).observe(

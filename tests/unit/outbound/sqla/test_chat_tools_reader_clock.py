@@ -1,4 +1,4 @@
-"""Unit tests — F4: Clock injection into SqlaChatToolsReader.
+"""Unit tests — Clock injection into SqlaChatToolsReader.
 
 These tests verify that get_category_trend and get_user_profile compute their
 month windows from the injected Clock, not from wall-clock datetime.now().

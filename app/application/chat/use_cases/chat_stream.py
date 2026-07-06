@@ -72,7 +72,6 @@ class ChatStreamUseCase:
         self._chat_tools = chat_tools
 
     async def __call__(self, command: ChatQueryCommand) -> AsyncGenerator[str | ChatStreamDone]:
-        """Streaming function-calling path: tool rounds resolved, final answer streamed."""
         user_id = command.user_id
         await self._budget.check(user_id)
 

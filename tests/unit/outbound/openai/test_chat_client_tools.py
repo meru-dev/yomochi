@@ -5,7 +5,7 @@ SDK client to assert: the loop executes tool_calls, accumulates usage across all
 rounds, stops at the iteration cap, and the streaming variant resolves tool
 rounds non-streamed then streams only the final answer.
 
-Also covers F3: two tool calls in one round execute concurrently and their
+Also covers: two tool calls in one round execute concurrently and their
 results are appended in the original request order.
 """
 
@@ -212,7 +212,7 @@ async def test_iteration_cap_stops_the_loop():
 
 
 # ---------------------------------------------------------------------------
-# F1 — streaming WITH tools every round (the 6 brief scenarios)
+# Streaming WITH tools every round (the 6 brief scenarios)
 # ---------------------------------------------------------------------------
 
 
@@ -425,7 +425,7 @@ async def test_stream_usage_accounting_sums_across_rounds():
 
 
 # ---------------------------------------------------------------------------
-# F3 — concurrent tool execution within a single round
+# Concurrent tool execution within a single round
 # ---------------------------------------------------------------------------
 
 
@@ -519,7 +519,7 @@ def _usage_cached(p, c, cached):
 
 @pytest.mark.asyncio
 async def test_non_stream_records_cached_tokens():
-    """F1: cached prompt tokens on the non-stream chat path hit the cache counter."""
+    """Cached prompt tokens on the non-stream chat path hit the cache counter."""
     from app.outbound.observability.prometheus import openai_cached_tokens_total
 
     model = "gpt-4o-mini"
@@ -539,7 +539,7 @@ async def test_non_stream_records_cached_tokens():
 
 @pytest.mark.asyncio
 async def test_prompt_cache_key_forwarded_non_stream():
-    """F1: prompt_cache_key is passed through to the non-stream create() call."""
+    """Prompt_cache_key is passed through to the non-stream create() call."""
     responses = [
         SimpleNamespace(choices=[_choice(content="Answer.")], usage=_usage(50, 5)),
     ]

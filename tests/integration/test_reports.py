@@ -161,7 +161,6 @@ async def test_trend_default_granularity_is_month(client: AsyncClient) -> None:
 
 
 async def test_summary_excludes_future_transactions_in_current_month(client: AsyncClient) -> None:
-    """Summary should exclude transactions dated after today in the current month."""
     await register_and_login(client, email="rep-future-sum@example.com", password=_PASS)
     # Past transaction in current month (June 2026) - should be included
     await create_transaction(
@@ -183,7 +182,6 @@ async def test_summary_excludes_future_transactions_in_current_month(client: Asy
 
 
 async def test_trend_excludes_future_transactions(client: AsyncClient) -> None:
-    """Trend should exclude transactions dated after today."""
     await register_and_login(client, email="rep-future-trend@example.com", password=_PASS)
     # Past transaction in current month (June 2026) - should be included
     await create_transaction(
@@ -203,7 +201,6 @@ async def test_trend_excludes_future_transactions(client: AsyncClient) -> None:
 
 
 async def test_summary_includes_all_transactions_in_past_months(client: AsyncClient) -> None:
-    """Summary for past months should include all transactions (no future filter)."""
     await register_and_login(client, email="rep-past-month@example.com", password=_PASS)
     # Transactions in April 2026 (past month)
     await create_transaction(

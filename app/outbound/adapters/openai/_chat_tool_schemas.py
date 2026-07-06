@@ -1,24 +1,17 @@
-"""OpenAI function (tool) schemas for the chat function-calling path (Task 4b).
+"""OpenAI function (tool) schemas for the chat function-calling path.
 
-These map 1:1 to the five ``ChatTools`` methods. The model only ever supplies
+These map 1:1 to the ``ChatTools`` methods. The model only ever supplies
 the typed parameters declared here — never free-form SQL — which is the
-determinism/auditability guarantee from Plan 4. ``user_id`` is deliberately
-NOT exposed as a parameter: the use case binds it server-side in the tool
-executor, so the model cannot select another user's data.
+determinism/auditability guarantee. ``user_id`` is deliberately NOT exposed
+as a parameter: the use case binds it server-side in the tool executor, so
+the model cannot select another user's data.
 """
 
 from typing import Any
 
-TOOL_NAMES: frozenset[str] = frozenset(
-    {
-        "get_month_summary",
-        "get_category_trend",
-        "get_spend_window",
-        "get_user_profile",
-        "search_transactions",
-        "list_categories",
-    }
-)
+from app.application.chat.ports.chat_tools import ToolName
+
+TOOL_NAMES: frozenset[str] = frozenset(ToolName)
 
 
 def _fn(
@@ -41,7 +34,7 @@ def _fn(
 
 CHAT_TOOL_SCHEMAS: list[dict[str, Any]] = [
     _fn(
-        "get_month_summary",
+        ToolName.GET_MONTH_SUMMARY,
         "Per-currency income, expenses, savings rate and top categories for one "
         "calendar month. Use for 'how much did I spend/earn/save in <month>'.",
         {
@@ -56,7 +49,7 @@ CHAT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         ["year", "month"],
     ),
     _fn(
-        "get_category_trend",
+        ToolName.GET_CATEGORY_TREND,
         "Month-over-month EXPENSE series for one named category, n_months back "
         "from today. Use for 'how has my <category> spending changed'.",
         {
@@ -71,7 +64,7 @@ CHAT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         ["category", "n_months"],
     ),
     _fn(
-        "get_spend_window",
+        ToolName.GET_SPEND_WINDOW,
         "Totals and per-category breakdown over an arbitrary date range. Use for "
         "'what did I spend between <start> and <end>'.",
         {
@@ -87,14 +80,14 @@ CHAT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         ["start_date", "end_date"],
     ),
     _fn(
-        "get_user_profile",
+        ToolName.GET_USER_PROFILE,
         "Four-month rolling aggregate of the user's finances. Call this first for "
         "broad 'how am I doing' questions to ground the answer.",
         {},
         [],
     ),
     _fn(
-        "search_transactions",
+        ToolName.SEARCH_TRANSACTIONS,
         "Fuzzy text match on merchant/notes to find specific charges. Use for "
         "'find that charge from <merchant>' style questions.",
         {
@@ -112,7 +105,7 @@ CHAT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         ["text", "limit"],
     ),
     _fn(
-        "list_categories",
+        ToolName.LIST_CATEGORIES,
         "Returns all category names the user has assigned to transactions, "
         "with their type (expense/income) and transaction count (most-used first). "
         "Call this to discover exact category names before using get_category_trend "

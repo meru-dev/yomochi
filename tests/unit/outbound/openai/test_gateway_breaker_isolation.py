@@ -10,7 +10,7 @@ from app.application.common.ai_errors import OpenAICallError
 @pytest.mark.asyncio
 async def test_vision_failure_does_not_open_chat_breaker() -> None:
     """Repeated vision failures must not open the chat circuit breaker (per-class
-    breaker isolation, F19)."""
+    breaker isolation)."""
     import purgatory
 
     from app.outbound.adapters.openai._gateway.gateway import OpenAIGateway

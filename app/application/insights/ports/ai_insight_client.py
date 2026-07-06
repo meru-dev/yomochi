@@ -14,7 +14,7 @@ class InsightRequest:
     chunks: list[InsightContextChunk]
     user_question: str | None = None
     # Stable per-user key the AI adapter MAY use for provider-side cache routing
-    # (F1) — provider-neutral; the OpenAI adapter maps it to prompt_cache_key.
+    # provider-neutral; the OpenAI adapter maps it to prompt_cache_key.
     # None = no routing hint.
     cache_key: str | None = None
 

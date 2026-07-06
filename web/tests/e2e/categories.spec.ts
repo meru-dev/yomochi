@@ -5,7 +5,7 @@ test.describe("Categories page", () => {
     await page.goto("/categories")
 
     // System groups are present (at least one known group name)
-    await expect(page.getByText("Food & Dining")).toBeVisible()
+    await expect(page.getByText("Food & Drink")).toBeVisible()
 
     // At least one leaf is visible (indented under parent)
     await expect(page.getByText("Groceries")).toBeVisible()
@@ -14,7 +14,7 @@ test.describe("Categories page", () => {
   test("creates expense group category", async ({ authedPage: page }) => {
     await page.goto("/categories")
 
-    await page.fill('input[placeholder="e.g. Dining"]', "My sport")
+    await page.getByPlaceholder("e.g. Dining").fill("My sport")
     // Type defaults to expense, no parent — creates group
     await page.getByRole("button", { name: /create/i }).click()
 
@@ -25,7 +25,7 @@ test.describe("Categories page", () => {
     await page.goto("/categories")
 
     // Create group first
-    await page.fill('input[placeholder="e.g. Dining"]', "My hobbies")
+    await page.getByPlaceholder("e.g. Dining").fill("My hobbies")
     await page.getByRole("button", { name: /create/i }).click()
     await expect(page.getByText("My hobbies")).toBeVisible({ timeout: 8000 })
 
@@ -34,7 +34,7 @@ test.describe("Categories page", () => {
     await parentSelect.click()
     await page.getByRole("option", { name: "My hobbies" }).click()
 
-    await page.fill('input[placeholder="e.g. Dining"]', "Chess club")
+    await page.getByPlaceholder("e.g. Dining").fill("Chess club")
     await page.getByRole("button", { name: /create/i }).click()
 
     await expect(page.getByText("Chess club")).toBeVisible({ timeout: 8000 })
@@ -58,7 +58,7 @@ test.describe("Category picker in transaction modal", () => {
     await expect(dropdown).toBeVisible()
 
     // Should show group labels (SelectLabel) — at least one known system group
-    await expect(dropdown.getByText("Food & Dining")).toBeVisible()
+    await expect(dropdown.getByText("Food & Drink")).toBeVisible()
 
     // Should show leaf items underneath
     await expect(dropdown.getByRole("option", { name: "Groceries" })).toBeVisible()

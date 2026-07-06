@@ -1,4 +1,4 @@
-"""F19: per-endpoint-class limiter buckets + bounded-queue overflow rejection."""
+"""Per-endpoint-class limiter buckets + bounded-queue overflow rejection."""
 
 from __future__ import annotations
 

@@ -13,7 +13,7 @@ from app.outbound.persistence_sqla.mappings.outbox_event import outbox_events
 
 
 class SqlaOutboxAdmin(OutboxAdmin):
-    """Operational outbox maintenance (F17). Separate from the request-path
+    """Operational outbox maintenance. Separate from the request-path
     ``SqlaOutboxRepository`` so the hot write path stays append-only."""
 
     def __init__(self, session: AsyncSession) -> None:

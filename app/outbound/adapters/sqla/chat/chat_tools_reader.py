@@ -1,13 +1,3 @@
-"""SqlaChatToolsReader — SQLA implementation of the ChatTools port.
-
-Pattern follows SqlaBudgetSummaryReader: imperative SA table references,
-AsyncSession, StorageError wrapping. All queries are user_id-scoped.
-
-pg_trgm GIN index on transactions.merchant and transactions.notes is
-already created by migration 000000000001_init — no new migration needed
-for search_transactions.
-"""
-
 import calendar
 from datetime import date
 from decimal import Decimal
@@ -62,7 +52,6 @@ def _to_transaction_rows(rows: list[BudgetTransactionRow]) -> list[TransactionRo
 def _build_currency_summaries(
     year: int, month: int, rows: list[BudgetTransactionRow]
 ) -> list[CurrencyMonthSummary]:
-    """Aggregate BudgetTransactionRows into per-currency CurrencyMonthSummary objects."""
     aggs = aggregate(year, month, _to_transaction_rows(rows))
     result = []
     for agg in aggs:
@@ -169,7 +158,6 @@ class SqlaChatToolsReader:
         first_day: date,
         last_day: date,
     ) -> list[CategoryTrendPoint]:
-        """Direct query returning per-(year, month, currency) sums for a category."""
         try:
             stmt = (
                 sa.select(
@@ -273,7 +261,6 @@ class SqlaChatToolsReader:
         text: str,
         limit: int,
     ) -> SearchTransactionsResult:
-        """Fuzzy match on merchant/notes using ILIKE — served by existing pg_trgm GIN index."""
         uid = UserId(value=UUID(user_id))
         pattern = f"%{text}%"
         try:
@@ -324,12 +311,6 @@ class SqlaChatToolsReader:
     # ------------------------------------------------------------------
 
     async def list_categories(self, user_id: str) -> ListCategoriesResult:
-        """Distinct categories used by this user, ordered by transaction_count desc.
-
-        Opens a fresh short session (same pattern as sibling methods). Inner-joins
-        transactions to categories so NULL category_id rows are naturally excluded.
-        Scoped to the given user_id — another user's categories never appear.
-        """
         uid = UserId(value=UUID(user_id))
         try:
             stmt = (

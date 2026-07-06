@@ -5,6 +5,7 @@ import { api } from "@/lib/api/client"
 import { keys } from "@/lib/query/keys"
 import { parseSSEBuffer } from "@/features/chat/lib/parseSSE"
 import type { SSEEvent } from "@/features/chat/lib/parseSSE"
+import { useUIStore } from "@/lib/store/ui"
 
 
 export interface ChatMessage {
@@ -23,6 +24,7 @@ export function useStreamChat() {
   const [streamError, setStreamError] = useState<string | null>(null)
   const [historyLoaded, setHistoryLoaded] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const { showToast } = useUIStore()
 
   useEffect(() => () => { abortRef.current?.abort() }, [])
 
@@ -125,6 +127,13 @@ export function useStreamChat() {
                 : m
             )
           )
+          if (event.save_failed) {
+            showToast({
+              message: "Message sent but not saved",
+              meta: "won't appear in history",
+              ttl: 6000,
+            })
+          }
           qc.invalidateQueries({ queryKey: keys.chat.history() })
         } else if (event.type === "error") {
           setStreamError(event.message)

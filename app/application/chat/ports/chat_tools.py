@@ -1,17 +1,27 @@
-"""ChatTools port — typed tool library for function-calling chat backend (Task 4a).
+"""ChatTools port — typed tool library for function-calling chat backend.
 
 Each method is user_id-scoped and returns typed dataclasses.  Field types are
 *domain-accurate* (Decimal for amounts, date for dates) — they are NOT directly
-passable to json.dumps.  Callers that need to serialise results (e.g. Task 4b
-OpenAI tool-role messages) must first convert via ``to_jsonable(result)``.
-No OpenAI wiring lives here; that is Task 4b.
+passable to json.dumps.  Callers that need to serialise results (e.g. OpenAI
+tool-role messages) must first convert via ``to_jsonable(result)``.
+No OpenAI wiring lives here.
 """
 
 import dataclasses
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
+
+
+class ToolName(StrEnum):
+    GET_MONTH_SUMMARY = "get_month_summary"
+    GET_CATEGORY_TREND = "get_category_trend"
+    GET_SPEND_WINDOW = "get_spend_window"
+    GET_USER_PROFILE = "get_user_profile"
+    SEARCH_TRANSACTIONS = "search_transactions"
+    LIST_CATEGORIES = "list_categories"
 
 
 @dataclass(frozen=True)
@@ -104,9 +114,7 @@ class ChatTools(Protocol):
         user_id: str,
         year: int,
         month: int,
-    ) -> MonthSummaryResult:
-        """Per-currency income/expense/savings-rate + top categories for one calendar month."""
-        ...
+    ) -> MonthSummaryResult: ...
 
     async def get_category_trend(
         self,
@@ -126,9 +134,7 @@ class ChatTools(Protocol):
         user_id: str,
         start_date: date,
         end_date: date,
-    ) -> SpendWindowResult:
-        """Totals + per-category breakdown over an arbitrary date range."""
-        ...
+    ) -> SpendWindowResult: ...
 
     async def get_user_profile(
         self,

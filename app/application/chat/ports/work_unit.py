@@ -8,8 +8,6 @@ from app.application.chat.ports.chat_history_store import ChatHistoryStore
 
 @dataclass(frozen=True, slots=True)
 class ChatWorkUnit:
-    """Session-bound ports needed inside one short TX scope for the chat path."""
-
     history_store: ChatHistoryStore
 
 

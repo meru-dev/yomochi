@@ -9,12 +9,6 @@ from app.outbound.adapters.sqla.insights.insight_repository import SqlaInsightRe
 
 
 class SqlaInsightWorkUnitFactory:
-    """Hands out a per-call UoW backed by an async_sessionmaker.
-
-    Each call opens its own `async with session_factory.begin()` and yields the
-    adapter bundle. The TX commits on clean exit and rolls back on exception.
-    """
-
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._factory = session_factory
 

@@ -21,7 +21,7 @@ class OutboxAdmin(Protocol):
         limit: int | None = None,
         dry_run: bool = False,
     ) -> list[UUID]:
-        """Flip quarantined (FAILED) outbox rows back to PENDING for replay (F17).
+        """Flip quarantined (FAILED) outbox rows back to PENDING for replay.
 
         Selects FAILED rows matching the given filters (``ids`` / ``event_type`` /
         ``failed_before``, optionally capped by ``limit``), resets them to PENDING

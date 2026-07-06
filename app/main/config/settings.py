@@ -25,7 +25,7 @@ class AppSettings(BaseSettings):
     # Must be an explicit allow-list because allow_credentials=True forbids wildcard origins.
     cors_allow_origins: str = ""
 
-    # SMTP — password-reset email delivery (F16).
+    # SMTP — password-reset email delivery.
     # smtp_host empty (default) = SMTP disabled; the mailer provider falls back to
     # StdoutMailer. Works against any SMTP relay (SES/Resend/Gmail/...).
     smtp_host: str = ""
@@ -106,7 +106,7 @@ class OpenAISettings(BaseSettings):
     openai_connect_timeout_seconds: float = 5.0
     openai_read_timeout_chat_seconds: float = 60.0
     openai_max_retries: int = 3  # SDK auto-retry on 429/5xx with Retry-After honored
-    # Per-endpoint-class rate-limit buckets (F19). One AsyncLimiter per class so a
+    # Per-endpoint-class rate-limit buckets. One AsyncLimiter per class so a
     # vision/parse burst can't starve interactive chat. Defaults PARTITION the
     # account RPM (sum ≈ 60) rather than each taking the full budget — separate
     # buckets must not over-subscribe the upstream account limit.

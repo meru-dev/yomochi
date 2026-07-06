@@ -78,7 +78,6 @@ async def _get_user_id(db_url: str, email: str) -> str:
 
 
 async def test_list_alerts_empty(client: AsyncClient, integration_settings: dict) -> None:
-    """GET /alerts with no alerts returns empty list and unread_count=0."""
     await register_and_login(client, email="alerts-empty@example.com", password=_PASS)
 
     resp = await client.get("/api/v1/alerts")
@@ -93,7 +92,6 @@ async def test_list_alerts_empty(client: AsyncClient, integration_settings: dict
 async def test_list_alerts_returns_inserted_alert(
     client: AsyncClient, integration_settings: dict
 ) -> None:
-    """GET /alerts returns the single inserted alert."""
     email = "alerts-one@example.com"
     db_url = integration_settings["database_settings"].database_url
 
@@ -113,7 +111,6 @@ async def test_list_alerts_returns_inserted_alert(
 async def test_list_alerts_unread_count_matches(
     client: AsyncClient, integration_settings: dict
 ) -> None:
-    """unread_count reflects only unread alerts."""
     email = "alerts-unread@example.com"
     db_url = integration_settings["database_settings"].database_url
 
@@ -131,7 +128,6 @@ async def test_list_alerts_unread_count_matches(
 
 
 async def test_unread_count_endpoint(client: AsyncClient, integration_settings: dict) -> None:
-    """GET /alerts/unread-count returns correct count."""
     email = "alerts-count@example.com"
     db_url = integration_settings["database_settings"].database_url
 
@@ -147,7 +143,6 @@ async def test_unread_count_endpoint(client: AsyncClient, integration_settings: 
 
 
 async def test_mark_alert_read(client: AsyncClient, integration_settings: dict) -> None:
-    """PATCH /{id}/read → 204, then GET /alerts shows is_read=true."""
     email = "alerts-markread@example.com"
     db_url = integration_settings["database_settings"].database_url
 
@@ -168,7 +163,6 @@ async def test_mark_alert_read(client: AsyncClient, integration_settings: dict) 
 async def test_mark_alert_read_wrong_user_returns_404(
     client: AsyncClient, integration_settings: dict
 ) -> None:
-    """User B cannot mark user A's alert as read — expects 404."""
     email_a = "alerts-owner@example.com"
     email_b = "alerts-attacker@example.com"
     db_url = integration_settings["database_settings"].database_url
@@ -189,7 +183,6 @@ async def test_mark_alert_read_wrong_user_returns_404(
 async def test_mark_alert_read_nonexistent_returns_404(
     client: AsyncClient, integration_settings: dict
 ) -> None:
-    """PATCH with a random UUID that does not exist → 404."""
     await register_and_login(client, email="alerts-noexist@example.com", password=_PASS)
     fake_id = str(uuid.uuid4())
 
@@ -199,7 +192,6 @@ async def test_mark_alert_read_nonexistent_returns_404(
 
 
 async def test_clear_alerts(client: AsyncClient, integration_settings: dict) -> None:
-    """DELETE /alerts → 204, then GET /alerts returns empty list."""
     email = "alerts-clear@example.com"
     db_url = integration_settings["database_settings"].database_url
 
@@ -218,7 +210,6 @@ async def test_clear_alerts(client: AsyncClient, integration_settings: dict) -> 
 
 
 async def test_clear_alerts_user_isolation(client: AsyncClient, integration_settings: dict) -> None:
-    """User B clearing alerts must not affect user A's alerts."""
     email_a = "alerts-iso-a@example.com"
     email_b = "alerts-iso-b@example.com"
     db_url = integration_settings["database_settings"].database_url

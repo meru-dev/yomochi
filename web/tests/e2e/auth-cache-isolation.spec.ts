@@ -44,14 +44,14 @@ test.describe("Auth boundary clears cached data", () => {
     await expect(page.getByText(merchantA)).toBeVisible({ timeout: 8_000 })
 
     // ── User A: logout via UI (this is what triggers the cache clear) ────
-    await page.getByRole("button", { name: /logout/i }).click()
-    await page.waitForURL("/login")
+    await page.getByRole("button", { name: /sign out/i }).click()
+    await expect(page).toHaveURL("/login")
 
     // ── User B: register fresh on the same browser/Playwright page ────────
     await page.goto("/register")
-    await page.fill("#email", b)
-    await page.fill("#password", PASSWORD)
-    await page.fill("#confirmPassword", PASSWORD)
+    await page.getByLabel("Email").fill(b)
+    await page.getByLabel("Password").fill(PASSWORD)
+    await page.getByLabel("Confirm password").fill(PASSWORD)
     await page.getByRole("button", { name: /create account/i }).click()
     await expect(page).toHaveURL("/dashboard", { timeout: 10_000 })
 
@@ -86,10 +86,10 @@ test.describe("Auth boundary clears cached data", () => {
 
     await page.goto("/dashboard")
     // logout → login round-trip
-    await page.getByRole("button", { name: /logout/i }).click()
-    await page.waitForURL("/login")
-    await page.fill("#email", u)
-    await page.fill("#password", PASSWORD)
+    await page.getByRole("button", { name: /sign out/i }).click()
+    await expect(page).toHaveURL("/login")
+    await page.getByLabel("Email").fill(u)
+    await page.getByLabel("Password").fill(PASSWORD)
     await page.getByRole("button", { name: /sign in/i }).click()
     await expect(page).toHaveURL("/dashboard", { timeout: 10_000 })
 

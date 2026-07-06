@@ -91,7 +91,7 @@ class OpenAIInsightClient:
     async def _do_generate(self, client: AsyncOpenAI, request: InsightRequest) -> InsightResponse:
         # Prefix is [STABLE_SYSTEM, then the <FINANCIAL_DATA> block last] — the
         # stable system prompt first so it stays cached across this user's calls;
-        # prompt_cache_key pins them to the same backend (F1).
+        # prompt_cache_key pins them to the same backend.
         response = await client.beta.chat.completions.parse(
             model=self._model,
             messages=[
