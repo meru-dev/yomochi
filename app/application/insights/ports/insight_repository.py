@@ -10,8 +10,7 @@ from app.domain.value_objects.ids import InsightId, UserId
 MAX_RETRIES_EXCEEDED_ERROR = "max retries exceeded"
 
 
-class InsightNotFoundError(Exception):
-    """The Insight row does not exist."""
+class InsightNotFoundError(Exception): ...
 
 
 class InsightAlreadyTerminalError(Exception):

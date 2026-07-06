@@ -1,5 +1,5 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useUIStore, ToastSpec } from "@/lib/store/ui"
 
 export function ToastQueue() {
@@ -14,10 +14,12 @@ export function ToastQueue() {
 }
 
 function ToastItem({ toast, onDismiss }: { toast: ToastSpec; onDismiss: () => void }) {
+  const onDismissRef = useRef(onDismiss)
+  useEffect(() => { onDismissRef.current = onDismiss })
   useEffect(() => {
-    const t = setTimeout(onDismiss, toast.ttl)
+    const t = setTimeout(() => onDismissRef.current(), toast.ttl)
     return () => clearTimeout(t)
-  }, [toast.ttl, onDismiss])
+  }, [toast.ttl])
 
   return (
     <div className="flex items-center gap-4 px-5 py-3 bg-[var(--surface)] border border-[var(--rule-strong)] rounded-[3px] shadow-[0_12px_32px_rgba(0,0,0,0.32)] text-sm">

@@ -116,8 +116,6 @@ def format_monthly_summary(aggs: list[MonthlyAggregation]) -> str:
 
 @dataclass(frozen=True)
 class TransactionRow:
-    """Raw transaction data passed by application layer to this domain service."""
-
     amount: Decimal
     currency: str
     type_: str  # "income" | "expense"
@@ -126,7 +124,6 @@ class TransactionRow:
 
 
 def aggregate(year: int, month: int, rows: list[TransactionRow]) -> list[MonthlyAggregation]:
-    """Aggregate raw rows grouped by currency into MonthlyAggregation objects."""
     by_currency: dict[str, list[TransactionRow]] = {}
     for row in rows:
         by_currency.setdefault(row.currency, []).append(row)

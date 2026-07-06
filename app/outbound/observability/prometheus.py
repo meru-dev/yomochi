@@ -8,7 +8,6 @@ REGISTRY = CollectorRegistry(auto_describe=True)
 
 
 def make_metrics_app() -> Any:
-    """Return a Prometheus metrics ASGI app for mounting at /metrics."""
     return make_asgi_app(registry=REGISTRY)
 
 
@@ -42,6 +41,13 @@ consumer_dlq_events_total = Counter(
 )
 
 # Insights — M4
+insight_fallback_total = Counter(
+    "insight_fallback_total",
+    "Insight generations served by the deterministic fallback after a primary LLM-provider failure",
+    labelnames=["reason"],  # rate_limited | timeout | unavailable | invalid_request | error
+    registry=REGISTRY,
+)
+
 insight_generation_duration_seconds = Histogram(
     "insight_generation_duration_seconds",
     "End-to-end insight generation duration",
@@ -82,13 +88,30 @@ openai_circuit_state = Gauge(
 openai_limiter_waiting = Gauge(
     "openai_limiter_waiting",
     "Coroutines waiting on the OpenAI rate limiter (token bucket)",
-    labelnames=["endpoint"],  # embeddings | chat
+    labelnames=["endpoint"],  # chat | vision | parse
+    registry=REGISTRY,
+)
+
+openai_limiter_rejected_total = Counter(
+    "openai_limiter_rejected_total",
+    "OpenAI calls rejected because the per-endpoint limiter waiter queue was full",
+    labelnames=["endpoint"],  # chat | vision | parse
     registry=REGISTRY,
 )
 
 openai_cost_usd_total = Counter(
     "openai_cost_usd_total",
     "Estimated OpenAI API cost in USD",
+    labelnames=["endpoint", "model"],
+    registry=REGISTRY,
+)
+
+# Prompt-caching — cached_tokens is the subset of prompt_tokens served from
+# OpenAI's automatic prompt cache (≥1024-token stable prefix). Cache-hit rate =
+# openai_cached_tokens_total / openai_tokens_total{direction="prompt"}.
+openai_cached_tokens_total = Counter(
+    "openai_cached_tokens_total",
+    "OpenAI prompt tokens served from the prompt cache (cache hits)",
     labelnames=["endpoint", "model"],
     registry=REGISTRY,
 )
@@ -129,18 +152,32 @@ rate_limit_redis_error_total = Counter(
 # would silently break those queries.
 http_requests_total = Counter(
     "http_requests_total",
-    "HTTP requests by method, route template, and status class",
-    labelnames=["method", "route", "status_class"],
+    "HTTP requests by method, route template, status class, and route class",
+    labelnames=["method", "route", "status_class", "route_class"],
     registry=REGISTRY,
 )
 
 http_request_duration_seconds = Histogram(
     "http_request_duration_seconds",
     "HTTP request duration in seconds",
-    labelnames=["method", "route"],
+    labelnames=["method", "route", "route_class"],
     buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
     registry=REGISTRY,
 )
+
+# Routes that call an LLM at request time or dispatch work to an LLM worker.
+_AI_ROUTE_PREFIXES = (
+    "/api/v1/chat",
+    "/api/v1/insights",
+    "/api/v1/ingestion",
+)
+_AI_ROUTE_EXACT = {"/api/v1/transactions/parse-text"}
+
+
+def _classify_route(route: str) -> str:
+    if route in _AI_ROUTE_EXACT or any(route.startswith(p) for p in _AI_ROUTE_PREFIXES):
+        return "ai"
+    return "standard"
 
 
 def http_requests_metric() -> Callable[[Info], None]:
@@ -158,16 +195,16 @@ def http_requests_metric() -> Callable[[Info], None]:
         else:
             status = info.modified_status  # e.g. "2xx" when grouped
             status_class = status if status.endswith("xx") else f"{status[0]}xx"
-        http_requests_total.labels(info.method, route, status_class).inc()
+        http_requests_total.labels(info.method, route, status_class, _classify_route(route)).inc()
 
     return instrumentation
 
 
 def http_request_duration_metric() -> Callable[[Info], None]:
-    """Instrumentator closure for the request duration histogram."""
-
     def instrumentation(info: Info) -> None:
         route = info.modified_handler or "unknown"
-        http_request_duration_seconds.labels(info.method, route).observe(info.modified_duration)
+        http_request_duration_seconds.labels(info.method, route, _classify_route(route)).observe(
+            info.modified_duration
+        )
 
     return instrumentation

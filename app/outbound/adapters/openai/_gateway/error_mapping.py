@@ -38,7 +38,6 @@ def map_exception(exc: BaseException) -> OpenAICallError:
 
 
 def outcome_label(exc: OpenAICallError) -> str:
-    """Prometheus `outcome` label for a translated exception."""
     if isinstance(exc, AIRateLimitedError):
         return "rate_limited"
     if isinstance(exc, AITimeoutError):

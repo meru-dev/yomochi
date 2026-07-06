@@ -67,16 +67,10 @@ def test_consumer_owned_ports_importable() -> None:
         CategoryListItem,
         CategoryListReader,
     )
-    from app.application.transactions.ports.dirty_period_marker import (  # noqa: F401
-        DirtyPeriodMarker,
-    )
 
     # Adapters
     from app.outbound.adapters.sqla.transactions.category_list_reader import (  # noqa: F401
         SqlaCategoryListReader,
-    )
-    from app.outbound.adapters.sqla.transactions.dirty_period_marker import (  # noqa: F401
-        SqlaDirtyPeriodMarker,
     )
     from app.outbound.adapters.sqla.users.user_plan_lookup import (  # noqa: F401
         SqlaUserPlanLookup,

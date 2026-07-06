@@ -11,7 +11,6 @@ def compute_first_fire_date(
     day_of_week: int | None,
     month: int | None,
 ) -> date:
-    """Return the first fire date >= start_date for the given schedule."""
     if recurrence == Recurrence.WEEKLY:
         if day_of_week is None:
             raise ValueError("WEEKLY recurrence requires day_of_week")
@@ -55,7 +54,6 @@ def advance_next_fire_date(
     day_of_week: int | None,
     month: int | None,
 ) -> date:
-    """Return the next fire date after `current`."""
     if recurrence == Recurrence.WEEKLY:
         return current + timedelta(days=7)
 

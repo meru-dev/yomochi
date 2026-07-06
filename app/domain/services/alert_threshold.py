@@ -19,7 +19,6 @@ _FALLBACK_MIN = Decimal("20")
 
 
 def is_alertworthy(shift: DetectedShift) -> bool:
-    """True for high-severity shifts above the currency-specific noise floor."""
     if shift.severity != "high":
         return False
     if not shift.currency or shift.abs_change == Decimal("0"):

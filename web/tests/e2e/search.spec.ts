@@ -1,7 +1,5 @@
 import { test, expect } from "./fixtures"
 
-const SEARCH_INPUT = 'input[placeholder="Search transactions…"]'
-
 const MOCK_RESULTS = {
   items: [
     {
@@ -42,7 +40,7 @@ test.describe("Inline search — TransactionsView", () => {
     await page.goto("/transactions")
 
     const requestPromise = page.waitForRequest("**/api/v1/search")
-    await page.fill(SEARCH_INPUT, "mat")
+    await page.getByPlaceholder("Search transactions…").fill("mat")
     await requestPromise
 
     await expect(page.getByText("Matcha Bar").first()).toBeVisible()
@@ -57,12 +55,11 @@ test.describe("Inline search — TransactionsView", () => {
     })
     await page.goto("/transactions")
 
-    await page.fill(SEARCH_INPUT, "ma")
-    await page.waitForTimeout(800)
+    await page.getByPlaceholder("Search transactions…").fill("ma")
+    // Filter bar is visible in non-search mode — event-based wait, no arbitrary sleep
+    await expect(page.getByRole("button", { name: /expense/i }).first()).toBeVisible()
 
     expect(searchCalled).toBe(false)
-    // FilterBar is visible (not in search mode)
-    await expect(page.getByRole("button", { name: /expense/i }).first()).toBeVisible()
   })
 
   test("'searching…' indicator visible while request is pending", async ({ authedPage: page }) => {
@@ -78,7 +75,7 @@ test.describe("Inline search — TransactionsView", () => {
     await page.goto("/transactions")
 
     const requestPromise = page.waitForRequest("**/api/v1/search")
-    await page.fill(SEARCH_INPUT, "abc")
+    await page.getByPlaceholder("Search transactions…").fill("abc")
     await requestPromise
 
     // Route is holding — mutation is in pending state
@@ -94,14 +91,14 @@ test.describe("Inline search — TransactionsView", () => {
     await page.goto("/transactions")
 
     const requestPromise = page.waitForRequest("**/api/v1/search")
-    await page.fill(SEARCH_INPUT, "mat")
+    await page.getByPlaceholder("Search transactions…").fill("mat")
     await requestPromise
     await expect(page.getByText("Matcha Bar").first()).toBeVisible()
 
     // Click the inline "clear" link in the status line
     await page.getByRole("button", { name: "clear" }).click()
 
-    await expect(page.locator(SEARCH_INPUT)).toHaveValue("")
+    await expect(page.getByPlaceholder("Search transactions…")).toHaveValue("")
     await expect(page.getByRole("button", { name: /expense/i }).first()).toBeVisible()
   })
 
@@ -112,7 +109,7 @@ test.describe("Inline search — TransactionsView", () => {
     await page.goto("/transactions")
 
     const requestPromise = page.waitForRequest("**/api/v1/search")
-    await page.fill(SEARCH_INPUT, "xyz")
+    await page.getByPlaceholder("Search transactions…").fill("xyz")
     await requestPromise
 
     await expect(page.getByText("No results found.")).toBeVisible({ timeout: 5_000 })
@@ -125,7 +122,7 @@ test.describe("Inline search — TransactionsView", () => {
     await page.goto("/transactions")
 
     const requestPromise = page.waitForRequest("**/api/v1/search")
-    await page.fill(SEARCH_INPUT, "mat")
+    await page.getByPlaceholder("Search transactions…").fill("mat")
     await requestPromise
 
     // Status line: "3 results · clear"

@@ -32,7 +32,6 @@ async def test_increment_failures_returns_count() -> None:
 
 
 async def test_increment_failures_returns_increasing_count() -> None:
-    """Simulate three successive calls returning 1, 2, 3."""
     mock_script = AsyncMock(side_effect=[1, 2, 3])
     redis = MagicMock()
     redis.register_script = MagicMock(return_value=mock_script)

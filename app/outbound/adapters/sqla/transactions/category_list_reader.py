@@ -9,9 +9,6 @@ from app.outbound.persistence_sqla.mappings.category import categories
 
 
 class SqlaCategoryListReader:
-    """Reads (id, name, parent_id) tuples of system + user-owned categories.
-    Owns its SQL — does not depend on the categories adapter."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

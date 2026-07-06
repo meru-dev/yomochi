@@ -5,7 +5,6 @@ from uuid import UUID
 import structlog
 from opentelemetry import trace
 
-from app.application.common.ports.text_embedder import TextEmbedder
 from app.application.insights.config import InsightWorkerConfig
 from app.application.insights.ports.ai_insight_client import AIInsightClient, InsightRequest
 from app.application.insights.ports.insight_repository import (
@@ -16,7 +15,7 @@ from app.application.insights.ports.work_unit import InsightWorkUnitFactory
 from app.application.insights.use_cases._process_insight_steps import (
     AssembledContext,
     ClaimedInsight,
-    assemble_context,
+    build_insight_context,
     claim_insight,
     complete_insight,
     record_failure,
@@ -56,13 +55,11 @@ class ProcessInsightUseCase:
     def __init__(
         self,
         work_unit_factory: InsightWorkUnitFactory,
-        embedder: TextEmbedder,
         ai_client: AIInsightClient,
         shift_detector: BehavioralShiftDetector | None = None,
         config: InsightWorkerConfig | None = None,
     ) -> None:
         self._uow_factory = work_unit_factory
-        self._embedder = embedder
         self._ai_client = ai_client
         self._shift_detector = shift_detector or BehavioralShiftDetector()
         self._config = config or InsightWorkerConfig()
@@ -95,9 +92,8 @@ class ProcessInsightUseCase:
 
         start = time.perf_counter()
         try:
-            ctx: AssembledContext = await assemble_context(
+            ctx: AssembledContext = await build_insight_context(
                 self._uow_factory,
-                self._embedder,
                 self._shift_detector,
                 user_id=user_id,
                 period_year=claimed.period_year,
@@ -122,6 +118,7 @@ class ProcessInsightUseCase:
                         period_year=claimed.period_year,
                         period_month=claimed.period_month,
                         chunks=ctx.chunks,
+                        cache_key=str(user_id),
                     )
                 )
 

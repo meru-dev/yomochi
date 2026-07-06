@@ -7,7 +7,6 @@ from typing import Any
 import structlog
 from dishka import Provider, Scope, from_context, provide
 from redis.asyncio import Redis
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -27,6 +26,7 @@ from app.application.categories.use_cases.list_categories import ListCategoriesU
 from app.application.chat.ports.chat_ai_client import ChatAIClient
 from app.application.chat.ports.chat_history_store import ChatHistoryStore
 from app.application.chat.ports.chat_token_budget import ChatTokenBudget
+from app.application.chat.ports.chat_tools import ChatTools
 from app.application.chat.ports.id_generator import ChatTurnIdGenerator
 from app.application.chat.ports.work_unit import ChatWorkUnitFactory
 from app.application.chat.use_cases.chat_query import ChatQueryUseCase
@@ -39,20 +39,19 @@ from app.application.common.ports.flusher import Flusher
 from app.application.common.ports.identity_context import IdentityContext
 from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.common.ports.quota_check import QuotaCheck
-from app.application.common.ports.text_embedder import TextEmbedder
 from app.application.common.ports.user_plan_lookup import UserPlanLookup
 from app.application.ingestion.ports.image_preprocessor import ImagePreprocessor
 from app.application.ingestion.ports.receipt_extractor import ReceiptExtractor
 from app.application.ingestion.ports.upload_policy import UploadPolicy
 from app.application.ingestion.use_cases.parse_receipt import ParseReceiptUseCase
 from app.application.insights.config import InsightWorkerConfig
-from app.application.insights.ports.chunk_retriever import ChunkRetriever
-from app.application.insights.ports.dirty_period_repository import DirtyPeriodRepository
 from app.application.insights.ports.insight_repository import InsightRepository
 from app.application.insights.ports.transaction_reader import TransactionReader
+from app.application.insights.ports.work_unit import InsightWorkUnitFactory
 from app.application.insights.use_cases.get_insight import GetInsightUseCase
 from app.application.insights.use_cases.list_insights import ListInsightsUseCase
 from app.application.insights.use_cases.request_insight import RequestInsightUseCase
+from app.application.insights.use_cases.stream_insight import StreamInsightUseCase
 from app.application.recurring.ports.recurring_rule_repository import (
     RecurringRuleRepository as RecurringRuleRepositoryPort,
 )
@@ -72,7 +71,6 @@ from app.application.transactions.ports.budget_summary_reader import (
     BudgetSummaryReader as TxBudgetSummaryReader,
 )
 from app.application.transactions.ports.category_list_reader import CategoryListReader
-from app.application.transactions.ports.dirty_period_marker import DirtyPeriodMarker
 from app.application.transactions.ports.spend_trend_reader import SpendTrendReader
 from app.application.transactions.ports.transaction_repository import TransactionRepository
 from app.application.transactions.ports.transaction_text_parser import TransactionTextParser
@@ -130,30 +128,27 @@ from app.outbound.adapters.openai._gateway import (
 )
 from app.outbound.adapters.openai.chat_client import OpenAIChatClient
 from app.outbound.adapters.openai.receipt_extractor import OpenAIReceiptExtractor
-from app.outbound.adapters.openai.text_embedder import OpenAITextEmbedder
 from app.outbound.adapters.openai.transaction_text_parser import OpenAITransactionTextParser
-from app.outbound.adapters.redis.cached_text_embedder import CachedTextEmbedder
 from app.outbound.adapters.redis.chat_token_budget import RedisChatTokenBudget
 from app.outbound.adapters.redis.search_cache import RedisSearchCache
 from app.outbound.adapters.redis.session_store import RedisSessionStore
 from app.outbound.adapters.sqla.alerts.alert_repository import SqlaAlertRepository
 from app.outbound.adapters.sqla.categories.category_repository import SqlaCategoryRepository
 from app.outbound.adapters.sqla.chat.chat_history_store import SqlaChatHistoryStore
+from app.outbound.adapters.sqla.chat.chat_tools_reader import SqlaChatToolsReader
 from app.outbound.adapters.sqla.chat.work_unit_factory import SqlaChatWorkUnitFactory
 from app.outbound.adapters.sqla.common.flusher import SqlaFlusher
 from app.outbound.adapters.sqla.common.outbox_repository import SqlaOutboxRepository
 from app.outbound.adapters.sqla.common.quota_check import SqlaQuotaCheck
-from app.outbound.adapters.sqla.insights.chunk_retriever import SqlaChunkRetriever
-from app.outbound.adapters.sqla.insights.dirty_period_repository import SqlaDirtyPeriodRepository
 from app.outbound.adapters.sqla.insights.insight_repository import SqlaInsightRepository
 from app.outbound.adapters.sqla.insights.transaction_reader import SqlaTransactionReader
+from app.outbound.adapters.sqla.insights.work_unit_factory import SqlaInsightWorkUnitFactory
 from app.outbound.adapters.sqla.recurring.recurring_rule_repository import (
     SqlaRecurringRuleRepository,
 )
 from app.outbound.adapters.sqla.search.transaction_reader import SqlaSearchTransactionReader
 from app.outbound.adapters.sqla.search.transaction_searcher import SqlaTransactionSearcher
 from app.outbound.adapters.sqla.transactions.category_list_reader import SqlaCategoryListReader
-from app.outbound.adapters.sqla.transactions.dirty_period_marker import SqlaDirtyPeriodMarker
 from app.outbound.adapters.sqla.transactions.sqla_budget_summary_reader import (
     SqlaBudgetSummaryReader as SqlaTxBudgetSummaryReader,
 )
@@ -169,6 +164,7 @@ from app.outbound.adapters.sqla.users.user_repository import SqlaUserRepository
 from app.outbound.adapters.system.bcrypt_password_hasher import BcryptPasswordHasher
 from app.outbound.adapters.system.clock import SystemClock
 from app.outbound.adapters.system.config_upload_policy import ConfigUploadPolicy
+from app.outbound.adapters.system.smtp_mailer import SmtpMailer
 from app.outbound.adapters.system.stdout_mailer import StdoutMailer
 from app.outbound.adapters.system.uuid7_id_generator import (
     Uuid7CategoryIdGenerator,
@@ -219,11 +215,6 @@ class PersistenceProvider(Provider):
         )
         engine = create_async_engine(cfg.database_url, echo=False, **pool_kwargs)
 
-        @event.listens_for(engine.sync_engine, "connect")
-        def _set_hnsw_ef_search(dbapi_conn: Any, _conn_rec: Any) -> None:
-            cursor = dbapi_conn.cursor()
-            cursor.execute("SET hnsw.ef_search = 40")
-
         yield engine
         await engine.dispose()
 
@@ -257,15 +248,6 @@ class RequestProvider(Provider):
 
 
 class CommonAdaptersProvider(Provider):
-    """Cross-cutting infra used by more than one bounded context.
-
-    - Outbox + Flusher (transactional outbox machinery)
-    - OpenAIGateway (shared HTTP client + circuit breaker, used by chat/search/ingestion)
-    - TextEmbedder (used by chat + search)
-    - QuotaCheck (used by insights request use case, plan-bound)
-    - IdentityContext + CookieManager (request identity resolution)
-    """
-
     scope = Scope.REQUEST
 
     outbox_repo = provide(SqlaOutboxRepository, provides=OutboxRepository)
@@ -284,7 +266,8 @@ class CommonAdaptersProvider(Provider):
             connect_timeout_seconds=cfg.openai_connect_timeout_seconds,
             read_timeout_chat_seconds=cfg.openai_read_timeout_chat_seconds,
             max_retries=cfg.openai_max_retries,
-            rpm=cfg.openai_rpm,
+            rpm_per_endpoint=cfg.openai_rpm_per_endpoint,
+            max_queue=cfg.openai_limiter_max_queue,
             circuit_fail_max=cfg.openai_circuit_fail_max,
             circuit_reset_seconds=cfg.openai_circuit_reset_seconds,
         )
@@ -293,22 +276,6 @@ class CommonAdaptersProvider(Provider):
             yield gateway
         finally:
             await http_client.aclose()
-
-    @provide(scope=Scope.APP)
-    def text_embedder_impl(
-        self,
-        gateway: OpenAIGateway,
-        cfg: OpenAISettings,
-    ) -> OpenAITextEmbedder:
-        return OpenAITextEmbedder(
-            gateway=gateway,
-            model=cfg.openai_model_embed,
-            read_timeout_seconds=cfg.openai_read_timeout_embeddings_seconds,
-        )
-
-    @provide(scope=Scope.APP)
-    def text_embedder(self, impl: OpenAITextEmbedder, redis: Redis) -> TextEmbedder:  # type: ignore[type-arg]
-        return CachedTextEmbedder(inner=impl, redis=redis)
 
     @provide(scope=Scope.REQUEST)
     def quota_check(self, session: AsyncSession) -> QuotaCheck:
@@ -338,8 +305,6 @@ class CommonAdaptersProvider(Provider):
 
 
 class UsersAdaptersProvider(Provider):
-    """Users context: identity persistence + auth primitives + use cases."""
-
     scope = Scope.REQUEST
 
     user_repo = provide(SqlaUserRepository, provides=UserRepository)
@@ -351,12 +316,27 @@ class UsersAdaptersProvider(Provider):
 
     @provide(scope=Scope.APP)
     def mailer(self, cfg: AppSettings) -> Mailer:
+        if cfg.smtp_host:
+            if not cfg.smtp_from_email:
+                raise RuntimeError(
+                    "SMTP_FROM_EMAIL must be set when SMTP_HOST is configured. "
+                    "Set a sender address or clear SMTP_HOST to fall back to StdoutMailer."
+                )
+            return SmtpMailer(
+                host=cfg.smtp_host,
+                port=cfg.smtp_port,
+                username=cfg.smtp_username,
+                password=cfg.smtp_password,
+                from_email=cfg.smtp_from_email,
+                use_starttls=cfg.smtp_starttls,
+                timeout=cfg.smtp_timeout_seconds,
+            )
         if not cfg.debug:
             structlog.get_logger(__name__).warning(
                 "stdout_mailer_in_use",
                 note="StdoutMailer is active in a non-debug environment. "
                 "Password-reset emails are written to the log, not delivered. "
-                "Wire a real SMTP adapter (feature F16) before going to production.",
+                "Set SMTP_HOST before going to production.",
             )
         return StdoutMailer()
 
@@ -435,7 +415,6 @@ class TransactionsAdaptersProvider(Provider):
     category_list_reader = provide(SqlaCategoryListReader, provides=CategoryListReader)
     tx_budget_summary_reader = provide(SqlaTxBudgetSummaryReader, provides=TxBudgetSummaryReader)
     spend_trend_reader = provide(SqlaSpendTrendReader, provides=SpendTrendReader)
-    dirty_period_marker = provide(SqlaDirtyPeriodMarker, provides=DirtyPeriodMarker)
     transaction_id_gen = provide(Uuid7TransactionIdGenerator, provides=TransactionIdGenerator)
 
     @provide(scope=Scope.APP)
@@ -481,8 +460,6 @@ class InsightsAdaptersProvider(Provider):
     insight_repo = provide(SqlaInsightRepository, provides=InsightRepository)
     insight_id_gen = provide(Uuid7InsightIdGenerator, provides=InsightIdGenerator)
     transaction_reader = provide(SqlaTransactionReader, provides=TransactionReader)
-    dirty_period_repo = provide(SqlaDirtyPeriodRepository, provides=DirtyPeriodRepository)
-    chunk_retriever = provide(SqlaChunkRetriever, provides=ChunkRetriever)
 
     @provide
     def request_insight(
@@ -508,6 +485,18 @@ class InsightsAdaptersProvider(Provider):
     get_insight = provide(GetInsightUseCase)
     list_insights = provide(ListInsightsUseCase)
 
+    @provide(scope=Scope.APP)
+    def insight_work_unit_factory(
+        self, session_factory: async_sessionmaker[AsyncSession]
+    ) -> InsightWorkUnitFactory:
+        return SqlaInsightWorkUnitFactory(session_factory)
+
+    @provide(scope=Scope.REQUEST)
+    def stream_insight(self, factory: InsightWorkUnitFactory) -> StreamInsightUseCase:
+        # StreamInsightUseCase has keyword-only ctor args with defaults that dishka
+        # would otherwise try (and fail) to resolve, so build it explicitly.
+        return StreamInsightUseCase(factory)
+
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
@@ -529,11 +518,13 @@ class ChatAdaptersProvider(Provider):
         self,
         gateway: OpenAIGateway,
         settings: OpenAISettings,
+        chat_cfg: ChatSettings,
     ) -> ChatAIClient:
         return OpenAIChatClient(
             gateway=gateway,
             model=settings.openai_model_chat,
             read_timeout_seconds=settings.openai_read_timeout_chat_seconds,
+            max_tool_iterations=chat_cfg.chat_max_tool_iterations,
         )
 
     @provide(scope=Scope.APP)
@@ -542,42 +533,51 @@ class ChatAdaptersProvider(Provider):
     ) -> ChatWorkUnitFactory:
         return SqlaChatWorkUnitFactory(session_factory)
 
+    @provide(scope=Scope.APP)
+    def chat_tools(
+        self, session_factory: async_sessionmaker[AsyncSession], clock: Clock
+    ) -> ChatTools:
+        # APP-scoped, like the work-unit factory: SqlaChatToolsReader opens a fresh
+        # short session per tool call, so it never pins the REQUEST session across
+        # the OpenAI tool-selection round-trips (ARCHITECTURE §10.4 / bug B14).
+        return SqlaChatToolsReader(session_factory=session_factory, clock=clock)
+
     @provide(scope=Scope.REQUEST)
     def chat_query(
         self,
         work_unit_factory: ChatWorkUnitFactory,
-        embedder: TextEmbedder,
         ai_client: ChatAIClient,
         token_budget: ChatTokenBudget,
         id_generator: ChatTurnIdGenerator,
         clock: Clock,
+        chat_tools: ChatTools,
     ) -> ChatQueryUseCase:
         return ChatQueryUseCase(
             work_unit_factory=work_unit_factory,
-            embedder=embedder,
             ai_client=ai_client,
             token_budget=token_budget,
             id_generator=id_generator,
             clock=clock,
+            chat_tools=chat_tools,
         )
 
     @provide(scope=Scope.REQUEST)
     def chat_stream(
         self,
         work_unit_factory: ChatWorkUnitFactory,
-        embedder: TextEmbedder,
         ai_client: ChatAIClient,
         token_budget: ChatTokenBudget,
         id_generator: ChatTurnIdGenerator,
         clock: Clock,
+        chat_tools: ChatTools,
     ) -> ChatStreamUseCase:
         return ChatStreamUseCase(
             work_unit_factory=work_unit_factory,
-            embedder=embedder,
             ai_client=ai_client,
             token_budget=token_budget,
             id_generator=id_generator,
             clock=clock,
+            chat_tools=chat_tools,
         )
 
     list_chat_history = provide(ListChatHistoryUseCase)
@@ -700,11 +700,7 @@ class IngestionAdaptersProvider(Provider):
 
 
 def all_providers() -> tuple[Provider, ...]:
-    """Return all Dishka providers for the HTTP API.
-
-    Grouped: framework/infra → common cross-cutting → per-bounded-context.
-    Dishka resolves across providers, so order is for readability only.
-    """
+    # Dishka resolves across providers, so order is for readability only.
     return (
         # Framework / infra
         InfraProvider(),

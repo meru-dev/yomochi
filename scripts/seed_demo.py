@@ -10,20 +10,20 @@ from __future__ import annotations
 import argparse
 import asyncio
 import calendar
+import json
 import os
 import sys
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 import bcrypt
 
-from tests.fixtures.personas.loader import PERSONAS, load_fixture
+from tests.fixtures.personas.loader import _WINDOW_DAYS, PERSONAS, load_fixture
 
 
 def _uuid(value: str | None) -> UUID | None:
-    from uuid import UUID
-
     return UUID(value) if value else None
 
 
@@ -62,14 +62,14 @@ async def seed(persona: str) -> None:
     fixture = load_fixture(persona)
     email: str = fixture["user"]["email"]
     password: str = fixture["user"]["password"]
-    shifted_txs: list[dict] = fixture["transactions"]
-    raw_recurring: list[dict] = fixture.get("recurring", [])
+    shifted_txs: list[dict[str, Any]] = fixture["transactions"]
+    raw_recurring: list[dict[str, Any]] = fixture.get("recurring", [])
 
     today = date.today()
-    cutoff = today - timedelta(days=90)
+    cutoff = today - timedelta(days=_WINDOW_DAYS)
 
     if not shifted_txs:
-        sys.exit("No transactions fall within last 90 days. Check fixture.")
+        sys.exit(f"No transactions fall within last {_WINDOW_DAYS} days. Check fixture.")
 
     print(f"Seeding persona '{persona}'...")
     print(f"  User:         {email}")
@@ -162,32 +162,48 @@ async def seed(persona: str) -> None:
                     rule_rows,
                 )
 
-            # Mark all transaction months dirty so the insight worker picks them up
-            # immediately (seed bypasses the use case layer that normally does this).
-            dirty_rows = list({(tx["date"][:7]) for tx in shifted_txs})
-            dirty_period_rows = [
-                (user_id, int(ym[:4]), int(ym[5:7]), now) for ym in dirty_rows
-            ]
-            await conn.executemany(
-                "INSERT INTO dirty_periods (user_id, year, month, created_at) "
-                "VALUES ($1, $2, $3, $4) "
-                "ON CONFLICT (user_id, year, month) DO NOTHING",
-                dirty_period_rows,
-            )
-
-            # Queue portrait refresh so the portrait worker generates a user_portrait chunk.
+            # Trigger the insight-worker end-to-end for the CURRENT month, the same
+            # way the HTTP RequestInsight use case does: an `insights` row in QUEUED
+            # status + an `InsightRequested` outbox event. The outbox-worker relays it
+            # to Kafka, the insight-worker claims it (QUEUED → PROCESSING) and runs the
+            # deterministic pipeline over the 4 months just seeded.
+            #
+            # Behavioral-shift ALERTS need no seed record: the scheduler's
+            # `detect_shift_alerts_job` scans recently-active users on its own (daily
+            # 02:00 UTC) and writes alerts idempotently from these same aggregates.
+            insight_id = uuid4()
+            insight_payload = {
+                "insight_id": str(insight_id),
+                "user_id": str(user_id),
+                "period": "monthly",
+                "period_year": today.year,
+                "period_month": today.month,
+            }
             await conn.execute(
-                "INSERT INTO portrait_queue (user_id, marked_at) "
-                "VALUES ($1, $2) "
-                "ON CONFLICT (user_id) DO UPDATE SET marked_at = EXCLUDED.marked_at",
+                "INSERT INTO insights "
+                "(id, user_id, period, period_year, period_month, status, created_at) "
+                "VALUES ($1, $2, 'monthly', $3, $4, 'queued', $5)",
+                insight_id,
                 user_id,
+                today.year,
+                today.month,
                 now,
+            )
+            await conn.execute(
+                "INSERT INTO outbox_events "
+                "(id, event_type, aggregate_id, payload, status, occurred_at, user_id) "
+                "VALUES ($1, 'InsightRequested', $2, $3::jsonb, 'PENDING', $4, $5)",
+                uuid4(),
+                str(insight_id),
+                json.dumps(insight_payload),
+                now,
+                user_id,
             )
     finally:
         await conn.close()
 
-    print(f"  Recurring rules: {len(rule_rows)} created.")
-    print(f"  Dirty periods queued: {len(dirty_period_rows)} months.")
+    print(f"  Recurring rules:  {len(rule_rows)} created.")
+    print(f"  Insight queued:   {today.year}-{today.month:02d} (InsightRequested → outbox)")
     print(f"\nDone. Persona '{persona}' is ready.")
     print(f"  Email:    {email}")
     print(f"  Password: {password}")

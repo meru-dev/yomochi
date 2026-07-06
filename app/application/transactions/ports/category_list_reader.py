@@ -13,7 +13,6 @@ class CategoryListItem:
     parent_id: str | None  # None = group; not None = leaf
 
     def validate_assignable(self) -> None:
-        """Raise if this category cannot be assigned to a transaction (groups are not assignable)."""
         if self.parent_id is None:
             raise CategoryIsGroupError(self.id_)
 

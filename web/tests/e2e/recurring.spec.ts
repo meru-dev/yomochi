@@ -38,8 +38,8 @@ test.describe("Recurring rules", () => {
     await page.getByRole("button", { name: /\+ add/i }).click()
     await expect(page.getByRole("dialog")).toBeVisible()
 
-    await page.fill('input[placeholder="0"]', "1000")
-    await page.fill('input[placeholder="e.g. Netflix"]', "Netflix")
+    await page.getByRole("dialog").getByPlaceholder("0").fill("1000")
+    await page.getByRole("dialog").getByPlaceholder("e.g. Netflix").fill("Netflix")
     await page.getByRole("button", { name: /save rule/i }).click()
 
     await expect(page.getByText("Netflix")).toBeVisible({ timeout: 10_000 })
@@ -62,8 +62,8 @@ test.describe("Recurring rules", () => {
 
     await expect(page.getByText("Netflix")).toBeVisible()
 
-    page.once("dialog", (dialog) => dialog.accept())
     await page.getByRole("button", { name: /delete/i }).first().click()
+    await page.getByRole("button", { name: /confirm/i }).click()
 
     await expect(page.getByText("Netflix")).not.toBeVisible({ timeout: 8_000 })
     await expect(page.getByText("No recurring rules yet.")).toBeVisible()

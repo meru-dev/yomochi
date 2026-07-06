@@ -17,16 +17,19 @@ def _make_breakers() -> dict:
     breaker.__aexit__ = AsyncMock(return_value=False)
     breaker.context = MagicMock()
     breaker.context.state = "closed"
-    return {"chat": breaker, "embeddings": breaker, "vision": breaker}
+    return {"chat": breaker, "vision": breaker, "parse": breaker}
 
 
 def _make_gateway(limiter: AsyncLimiter | None = None) -> OpenAIGateway:
     mock_client = AsyncMock()
     mock_client.with_options = MagicMock(return_value=mock_client)
 
+    # Share one limiter instance across all endpoint buckets so the single-bucket
+    # assertions below (which only call endpoint="chat") observe every acquire.
+    lim = limiter or AsyncLimiter(max_rate=1000, time_period=60)
     return OpenAIGateway(
         client=mock_client,
-        limiter=limiter or AsyncLimiter(max_rate=1000, time_period=60),
+        limiters={"chat": lim, "vision": lim, "parse": lim},
         breakers=_make_breakers(),
         default_read_timeout_seconds=5.0,
     )
@@ -37,7 +40,7 @@ async def test_limiter_entered_once_per_call() -> None:
     """Each gateway.call() must acquire the limiter exactly once."""
     gateway = _make_gateway()
     acquire_count = 0
-    real_limiter = gateway._limiter
+    real_limiter = gateway._limiters["chat"]
     original_acquire = type(real_limiter).acquire
 
     async def counting_acquire(self):

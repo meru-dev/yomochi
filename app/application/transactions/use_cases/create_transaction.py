@@ -3,13 +3,10 @@ from datetime import UTC, date, datetime
 from uuid import UUID
 
 from app.application.common.audit_event import AuditEvent
-from app.application.common.outbox_event import OutboxEvent
 from app.application.common.ports.audit_log import AuditLog
-from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.common.ports.quota_check import QuotaCheck, QuotaResource
 from app.application.common.ports.user_plan_lookup import UserPlanLookup
 from app.application.transactions.ports.category_list_reader import CategoryListReader
-from app.application.transactions.ports.dirty_period_marker import DirtyPeriodMarker
 from app.application.transactions.ports.transaction_repository import TransactionRepository
 from app.domain.entities.transaction import Transaction
 from app.domain.ports.id_generator import TransactionIdGenerator
@@ -40,21 +37,17 @@ class CreateTransactionUseCase:
     def __init__(
         self,
         transaction_repo: TransactionRepository,
-        outbox_repo: OutboxRepository,
         id_generator: TransactionIdGenerator,
         user_plan_lookup: UserPlanLookup,
         quota_check: QuotaCheck,
         category_list_reader: CategoryListReader,
-        dirty_period_marker: DirtyPeriodMarker,
         audit_log: AuditLog,
     ) -> None:
         self._transaction_repo = transaction_repo
-        self._outbox_repo = outbox_repo
         self._id_generator = id_generator
         self._user_plan_lookup = user_plan_lookup
         self._quota_check = quota_check
         self._category_list_reader = category_list_reader
-        self._dirty_period_marker = dirty_period_marker
         self._audit_log = audit_log
 
     async def __call__(self, command: CreateTransactionCommand) -> CreateTransactionResult:
@@ -89,18 +82,6 @@ class CreateTransactionUseCase:
             recurring_rule_id=command.recurring_rule_id,
         )
         await self._transaction_repo.save(transaction)
-        await self._dirty_period_marker.mark_dirty(
-            transaction.user_id, command.date_.year, command.date_.month
-        )
-        await self._outbox_repo.append(
-            OutboxEvent(
-                event_type="TransactionCreated",
-                aggregate_id=str(transaction.id_),
-                payload={"transaction_date": command.date_.isoformat()},
-                occurred_at=now,
-                user_id=transaction.user_id.value,
-            )
-        )
         await self._audit_log.record(
             AuditEvent(
                 event_type=AuditEventType.TRANSACTION_CREATED,

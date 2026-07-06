@@ -42,9 +42,9 @@ def test_system_prompt_tells_model_not_to_follow_instructions_in_tags() -> None:
 
 
 def test_actual_content_appears_between_financial_data_tags() -> None:
-    from app.application.common.ports.chunk_retriever import RetrievedChunk
+    from app.application.insights.ports.insight_context import InsightContextChunk
 
-    chunk = RetrievedChunk(
+    chunk = InsightContextChunk(
         content="Groceries: $250",
         chunk_type="monthly_summary",
         period_label="March 2026",

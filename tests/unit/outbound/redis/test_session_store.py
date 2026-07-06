@@ -72,7 +72,6 @@ async def test_list_active_uses_single_mget_call() -> None:
 
 
 async def test_list_active_no_individual_get_calls() -> None:
-    """Ensure no per-session .get() calls are made."""
     sids_bytes = [str(_SID1.value).encode()]
     redis = _make_redis(sids_bytes, [_session_json(_SID1, _UID)])
     redis.get = AsyncMock(return_value=None)  # should never be called

@@ -18,6 +18,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.middleware.cors import CORSMiddleware
 
 from app.inbound.http.auth.middleware import AuthCookieMiddleware
 from app.inbound.http.errors.handlers import register_exception_handlers
@@ -202,7 +203,19 @@ def make_app(
             cookie_name=auth_cfg.cookie_name,
         )
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RequestIdMiddleware)  # outermost — runs first, echoes/generates X-Request-ID
+    app.add_middleware(RequestIdMiddleware)
+    # CORSMiddleware must be outermost so preflight OPTIONS requests are answered
+    # before auth/rate-limit/request-id run.  allow_credentials=True is required
+    # because the API authenticates via httpOnly cookie; this forbids wildcard
+    # origins, so only explicit origins from cors_allow_origin_list are accepted.
+    if app_cfg.cors_allow_origin_list:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(app_cfg.cors_allow_origin_list),
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     app.state.readiness_container = container
     app.state.readiness_redis = redis

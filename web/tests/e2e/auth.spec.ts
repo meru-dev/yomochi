@@ -14,12 +14,12 @@ test.describe("Auth flows", () => {
 
     // Logout via UI (cookie was set by the register API call above)
     await page.goto("/dashboard")
-    await page.getByRole("button", { name: /logout/i }).click()
-    await page.waitForURL("/login")
+    await page.getByRole("button", { name: /sign out/i }).click()
+    await expect(page).toHaveURL("/login")
 
     // Login via UI form
-    await page.fill("#email", email)
-    await page.fill("#password", PASSWORD)
+    await page.getByLabel("Email").fill(email)
+    await page.getByLabel("Password").fill(PASSWORD)
     await page.getByRole("button", { name: /sign in/i }).click()
 
     await expect(page).toHaveURL("/dashboard", { timeout: 10_000 })
@@ -29,7 +29,7 @@ test.describe("Auth flows", () => {
     await page.goto("/dashboard")
     await expect(page).toHaveURL("/dashboard")
 
-    await page.getByRole("button", { name: /logout/i }).click()
+    await page.getByRole("button", { name: /sign out/i }).click()
     await expect(page).toHaveURL("/login", { timeout: 8_000 })
 
     // Protected page must redirect to login when unauthenticated
@@ -50,14 +50,14 @@ test.describe("Auth flows", () => {
     await page.context().clearCookies()
 
     await page.goto("/register")
-    await page.fill("#email", email)
-    await page.fill("#password", PASSWORD)
-    await page.fill("#confirmPassword", PASSWORD)
+    await page.getByLabel("Email").fill(email)
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD)
+    await page.getByLabel("Confirm password").fill(PASSWORD)
     await page.getByRole("button", { name: /create account/i }).click()
 
     await expect(page).not.toHaveURL("/dashboard")
     await expect(
-      page.locator('[class*="danger"], [class*="error"], p:has-text("already"), p:has-text("exists")').first()
+      page.getByText("Registration failed. Try a different email.")
     ).toBeVisible({ timeout: 8_000 })
   })
 })

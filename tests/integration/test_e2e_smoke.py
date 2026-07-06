@@ -7,14 +7,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.application.insights.ports.ai_insight_client import InsightResponse
 from app.application.insights.use_cases.process_insight import ProcessInsightUseCase
-from app.domain.services.behavioral_shift_detector import BehavioralShiftDetector
 from app.inbound.messaging.insight_consumer import handle_insight_event
-from app.inbound.messaging.transaction_consumer import handle_transaction_event
 from app.main.config.settings import KafkaSettings
-from app.main.insight.refresh_tick import refresh_one_dirty_period
 from app.outbound.adapters.redis.consumer_idempotency_store import RedisConsumerIdempotencyStore
 from app.outbound.adapters.sqla.insights.work_unit_factory import SqlaInsightWorkUnitFactory
-from app.outbound.adapters.sqla.transactions.dirty_period_marker import SqlaDirtyPeriodMarker
 from app.outbound.outbox.poller import OutboxPoller
 from tests.integration.factories import create_transaction, register_and_login
 
@@ -40,9 +36,14 @@ async def test_e2e_tx_to_insight_completed(
     integration_settings: dict,
     redis_url: str,
 ) -> None:
-    """Full pipeline smoke: 5 transactions → outbox → dirty period → chunk refresh
-    (mock embedder) → insight requested → outbox → insight processed (mock AI)
-    → GET /insights/{id} status=completed."""
+    """Full pipeline smoke: 5 transactions → insight requested → outbox drain
+    → insight processed (deterministic context from SQL, mock AI)
+    → GET /insights/{id} status=completed.
+
+    The embedding/chunk-refresh subsystem was removed (arch-simplification
+    task 5b): process_insight now builds its context deterministically by reading
+    the period's transactions straight from SQL — no embedder, no chunk store.
+    """
 
     db_url = integration_settings["database_settings"].database_url
     redis = Redis.from_url(redis_url)
@@ -58,48 +59,7 @@ async def test_e2e_tx_to_insight_completed(
         for i in range(5):
             await create_transaction(client, date=f"2026-04-{i + 1:02d}", merchant="Lawson")
 
-        # ── 2. Outbox poller: drain TransactionCreated events ───────────────
-        publisher1 = _FakePublisher()
-        poller1 = OutboxPoller(
-            session_factory=session_factory,
-            publisher=publisher1,
-            topic_map={
-                "TransactionCreated": kafka.kafka_topic_transactions,
-                "TransactionUpdated": kafka.kafka_topic_transactions,
-                "TransactionDeleted": kafka.kafka_topic_transactions,
-            },
-            batch_size=50,
-        )
-        sent = await poller1.run_once()
-        assert sent >= 5, f"expected >= 5 outbox events, got {sent}"
-
-        # ── 3. Transaction consumer → mark dirty periods ────────────────────
-        store1 = RedisConsumerIdempotencyStore(redis=redis)
-        for body, _ in publisher1.published:
-            if body.get("event_type") == "TransactionCreated":
-                async with session_factory.begin() as session:
-                    await handle_transaction_event(
-                        body,
-                        store=store1,
-                        dlq_publisher=AsyncMock(),
-                        dirty_period_repo=SqlaDirtyPeriodMarker(session),
-                        metrics=metrics,
-                        dlq_topic=kafka.kafka_topic_dlq,
-                        max_retries=3,
-                        idempotency_ttl=86400,
-                    )
-
-        # ── 4. Refresh dirty period with mock embedder ──────────────────────
-        fake_embedder = AsyncMock()
-        fake_embedder.embed = AsyncMock(return_value=[0.1] * 1536)
-        fake_embedder.embed_batch = AsyncMock(return_value=[[0.1] * 1536])
-
-        did_work = await refresh_one_dirty_period(
-            session_factory, fake_embedder, BehavioralShiftDetector()
-        )
-        assert did_work is True, "dirty_periods queue was empty after consumer step"
-
-        # ── 5. Request insight via HTTP ─────────────────────────────────────
+        # ── 2. Request insight via HTTP ─────────────────────────────────────
         resp = await client.post(
             "/api/v1/insights/requests",
             json={"period": "monthly", "period_year": 2026, "period_month": 4},
@@ -107,21 +67,21 @@ async def test_e2e_tx_to_insight_completed(
         assert resp.status_code == 202, resp.text
         insight_id = resp.json()["id"]
 
-        # ── 6. Outbox poller: drain InsightRequested event ──────────────────
-        publisher2 = _FakePublisher()
-        poller2 = OutboxPoller(
+        # ── 3. Outbox poller: drain InsightRequested event ──────────────────
+        publisher = _FakePublisher()
+        poller = OutboxPoller(
             session_factory=session_factory,
-            publisher=publisher2,
+            publisher=publisher,
             topic_map={"InsightRequested": kafka.kafka_topic_insights},
             batch_size=50,
         )
-        await poller2.run_once()
+        await poller.run_once()
         insight_events = [
-            b for b, _ in publisher2.published if b.get("event_type") == "InsightRequested"
+            b for b, _ in publisher.published if b.get("event_type") == "InsightRequested"
         ]
         assert insight_events, "no InsightRequested event in outbox"
 
-        # ── 7. Insight consumer: mock AI, run full pipeline ─────────────────
+        # ── 4. Insight consumer: mock AI, run full pipeline ─────────────────
         fake_ai = AsyncMock()
         fake_ai.generate = AsyncMock(
             return_value=InsightResponse(
@@ -135,14 +95,13 @@ async def test_e2e_tx_to_insight_completed(
 
         process_insight = ProcessInsightUseCase(
             work_unit_factory=SqlaInsightWorkUnitFactory(session_factory),
-            embedder=fake_embedder,
             ai_client=fake_ai,
         )
-        store2 = RedisConsumerIdempotencyStore(redis=redis)
+        store = RedisConsumerIdempotencyStore(redis=redis)
         for body in insight_events:
             await handle_insight_event(
                 body,
-                store=store2,
+                store=store,
                 dlq_publisher=AsyncMock(),
                 process_insight=process_insight,
                 metrics=metrics,
@@ -151,7 +110,7 @@ async def test_e2e_tx_to_insight_completed(
                 idempotency_ttl=86400,
             )
 
-        # ── 8. Verify insight completed ─────────────────────────────────────
+        # ── 5. Verify insight completed ─────────────────────────────────────
         resp = await client.get(f"/api/v1/insights/{insight_id}")
         assert resp.status_code == 200, resp.text
         data = resp.json()

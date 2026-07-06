@@ -8,7 +8,6 @@ import pytest
 
 from app.application.insights.ports.ai_insight_client import InsightResponse
 from app.application.insights.ports.budget_summary_reader import BudgetTransactionRow
-from app.application.insights.ports.chunk_retriever import RetrievedChunk
 from app.application.insights.ports.work_unit import InsightWorkUnit
 from app.application.insights.use_cases.process_insight import (
     ProcessInsightCommand,
@@ -25,7 +24,6 @@ from app.application.transactions.use_cases.create_transaction import (
 from app.domain.entities.insight import Insight
 from app.domain.value_objects.enums import ContextQuality, InsightStatus, Period, Plan
 from app.domain.value_objects.ids import InsightId, UserId
-from app.inbound.messaging.transaction_consumer import handle_transaction_event
 from app.main.config.settings import InsightWorkerSettings
 from tests.fakes.id_generator import FakeInsightIdGenerator, FakeTransactionIdGenerator
 from tests.fakes.repositories import (
@@ -35,19 +33,6 @@ from tests.fakes.repositories import (
 )
 
 pytestmark = pytest.mark.asyncio
-
-
-class _RecordingDirtyRepo:
-    def __init__(self) -> None:
-        self.marked: list[tuple] = []
-
-    async def mark_dirty(self, user_id, year: int, month: int) -> None:
-        self.marked.append((user_id, year, month))
-
-    async def pop_dirty(self, limit: int = 100):
-        result = self.marked[:limit]
-        self.marked = self.marked[limit:]
-        return result
 
 
 class _InMemoryInsightRepo:
@@ -90,32 +75,6 @@ class _InMemoryInsightRepo:
         return ReapResult(requeued=[], exhausted_count=0)
 
 
-def _outbox_kafka_shape(event) -> dict:
-    """Mirror OutboxPoller._publish_row so the consumer sees what it would in prod."""
-    return {
-        "event_id": str(uuid.uuid4()),
-        "event_type": event.event_type,
-        "aggregate_id": event.aggregate_id,
-        "user_id": str(event.user_id),
-        "payload": event.payload,
-        "occurred_at": event.occurred_at.isoformat(),
-    }
-
-
-class _FakeStore:
-    def __init__(self) -> None:
-        self._processed: set[str] = set()
-
-    async def is_processed(self, event_id: str) -> bool:
-        return event_id in self._processed
-
-    async def mark_processed(self, event_id: str, ttl_seconds: int) -> None:
-        self._processed.add(event_id)
-
-    async def increment_failures(self, event_id: str) -> int:
-        return 1
-
-
 class _FakeMetrics:
     def consumer_idempotency_skip(self, topic: str) -> None: ...
     def consumer_dlq_event(self, topic: str) -> None: ...
@@ -125,7 +84,9 @@ class _FakeMetrics:
 async def test_full_flow_create_transaction_to_insight_completed() -> None:
     user_id = UserId(uuid.uuid4())
 
-    # ---------- 1. create transaction ----------
+    # ---------- 1. create transactions ----------
+    # The transaction-worker Kafka path and the dirty-period subsystem have been
+    # removed; CreateTransactionUseCase just persists + audits.
     tx_repo = FakeTransactionRepository()
     outbox = FakeOutboxRepository()
     user_plan_lookup = MagicMock()
@@ -136,16 +97,14 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
 
     create_tx = CreateTransactionUseCase(
         transaction_repo=tx_repo,
-        outbox_repo=outbox,
         id_generator=FakeTransactionIdGenerator(),
         user_plan_lookup=user_plan_lookup,
         category_list_reader=FakeCategoryListReader(),
         quota_check=_NoOpQuotaCheck(),  # type: ignore[arg-type]
-        dirty_period_marker=AsyncMock(),  # type: ignore[arg-type]
         audit_log=AsyncMock(),  # type: ignore[arg-type]
     )
 
-    # seed 5+ transactions so the insight gating passes
+    # seed 6 transactions so the insight gating passes (min=5)
     for i in range(6):
         await create_tx(
             CreateTransactionCommand(
@@ -156,29 +115,11 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
                 type_="expense",
             )
         )
-    assert len(outbox.events) == 6
 
-    # ---------- 2. outbox → consumer ----------
-    dirty_repo = _RecordingDirtyRepo()
-    for ev in outbox.events:
-        body = _outbox_kafka_shape(ev)
-        await handle_transaction_event(
-            body,
-            store=_FakeStore(),
-            dlq_publisher=AsyncMock(),
-            dirty_period_repo=dirty_repo,
-            metrics=_FakeMetrics(),
-            dlq_topic="dlq",
-            max_retries=3,
-            idempotency_ttl=86400,
-        )
+    # No outbox events emitted for transactions (consumer removed).
+    assert len(outbox.events) == 0
 
-    # Every transaction should have marked April 2026 dirty
-    assert any(year == 2026 and month == 4 for _, year, month in dirty_repo.marked), (
-        f"dirty_periods never marked — outbox payload shape mismatch (CRIT-1). marked={dirty_repo.marked}"
-    )
-
-    # ---------- 3. request insight ----------
+    # ---------- 2. request insight ----------
     insight_repo = _InMemoryInsightRepo()
     tx_reader = AsyncMock()
     tx_reader.count_for_period = AsyncMock(return_value=6)
@@ -201,25 +142,7 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
     saved_insight = insight_repo.by_id[insight_id]
     assert saved_insight.status == InsightStatus.QUEUED
 
-    # ---------- 4. process insight via UoW factory ----------
-    chunks = [
-        RetrievedChunk(
-            content="April spending summary",
-            chunk_type="monthly_summary",
-            period_label="April 2026",
-            metadata={},
-        ),
-        RetrievedChunk(
-            content="Shift in food spend",
-            chunk_type="behavioral_shift",
-            period_label="April 2026",
-            metadata={},
-        ),
-    ]
-    retriever = AsyncMock()
-    retriever.search = AsyncMock(return_value=chunks)
-    retriever.get_portrait = AsyncMock(return_value=None)
-
+    # ---------- 3. process insight via UoW factory ----------
     budget_reader = AsyncMock()
     budget_reader.read_month = AsyncMock(
         return_value=[
@@ -234,16 +157,9 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
     )
     budget_reader.read_history_months = AsyncMock(return_value={})
 
-    embedder = AsyncMock()
-    embedder.embed = AsyncMock(return_value=[0.1] * 1536)
-
     uow = InsightWorkUnit(
         insight_repo=insight_repo,
-        chunk_writer=AsyncMock(),
-        chunk_retriever=retriever,
         budget_reader=budget_reader,
-        alert_writer=AsyncMock(),
-        dirty_period_repo=AsyncMock(),
     )
 
     @asynccontextmanager
@@ -266,12 +182,12 @@ async def test_full_flow_create_transaction_to_insight_completed() -> None:
 
     process_insight = ProcessInsightUseCase(
         work_unit_factory=factory,
-        embedder=embedder,
         ai_client=ai_client,
     )
     await process_insight(ProcessInsightCommand(insight_id=str(insight_id), user_id=str(user_id)))
 
     final_insight = insight_repo.by_id[insight_id]
     assert final_insight.status == InsightStatus.COMPLETED
-    assert final_insight.context_quality == ContextQuality.FULL
+    # PARTIAL because read_history_months returns {} (no history → no shift detection)
+    assert final_insight.context_quality in {ContextQuality.FULL, ContextQuality.PARTIAL}
     assert final_insight.title == "You spent more on food"

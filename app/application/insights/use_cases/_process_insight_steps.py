@@ -5,14 +5,21 @@ from datetime import UTC, datetime, timedelta
 import structlog
 from opentelemetry import trace
 
-from app.application.common.context_quality import assess_quality
-from app.application.common.ports.chunk_retriever import RetrievedChunk
-from app.application.common.ports.text_embedder import TextEmbedder
-from app.application.insights.embedding_pipeline import EmbeddingPipeline
 from app.application.insights.ports.ai_insight_client import InsightResponse
+from app.application.insights.ports.insight_context import InsightContextChunk
 from app.application.insights.ports.insight_repository import InsightNotFoundError
 from app.application.insights.ports.work_unit import InsightWorkUnitFactory
-from app.domain.services.behavioral_shift_detector import BehavioralShiftDetector
+from app.domain.services.behavioral_shift_detector import (
+    BehavioralShiftDetector,
+    DetectedShift,
+    format_shift_text,
+)
+from app.domain.services.monthly_aggregator import (
+    MonthlyAggregation,
+    TransactionRow,
+    aggregate,
+    format_monthly_summary,
+)
 from app.domain.value_objects.budget_summary_snapshot import BudgetSummarySnapshot
 from app.domain.value_objects.enums import ContextQuality, Period
 from app.domain.value_objects.ids import InsightId, UserId
@@ -32,7 +39,7 @@ class ClaimedInsight:
 
 @dataclass(frozen=True, slots=True)
 class AssembledContext:
-    chunks: list[RetrievedChunk]
+    chunks: list[InsightContextChunk]
     quality: ContextQuality
 
 
@@ -61,50 +68,111 @@ async def claim_insight(
         )
 
 
-async def assemble_context(
+_N_HISTORY_MONTHS = 3
+
+
+async def build_insight_context(
     uow_factory: InsightWorkUnitFactory,
-    embedder: TextEmbedder,
     shift_detector: BehavioralShiftDetector,
     *,
     user_id: UserId,
     period_year: int,
     period_month: int,
 ) -> AssembledContext:
-    """Refresh chunks (TX2) → embed query (no TX) → retrieve (TX3) → assess.
+    """Deterministic context builder — no embedder, no ANN search, no portrait.
 
-    No DB transaction is held across the embedder call; that's the whole point
-    of the split. Returns the chunks the AI client will see plus the quality
-    grade — callers short-circuit to failure on `ContextQuality.NONE`.
+    Reads the period's transactions and 3-month history from SQL, runs the
+    aggregation + shift-detection logic, then formats the results directly into
+    pseudo-chunks for the AI client.
+
+    Quality classification:
+    - NONE    → no rows for the period  → caller records failure, AI not called.
+    - FULL    → rows present + shifts detected.
+    - PARTIAL → rows present, no shifts.
     """
-    # TX2 — refresh
-    with tracer.start_as_current_span("refresh_chunks"):
+    with tracer.start_as_current_span("deterministic_context"):
         async with uow_factory() as uow:
-            pipeline = EmbeddingPipeline(
-                budget_reader=uow.budget_reader,
-                chunk_writer=uow.chunk_writer,
-                embedder=embedder,
-                shift_detector=shift_detector,
-                alert_writer=uow.alert_writer,
+            rows = await uow.budget_reader.read_month(user_id, period_year, period_month)
+            if not rows:
+                return AssembledContext(chunks=[], quality=ContextQuality.NONE)
+
+            history_raw = await uow.budget_reader.read_history_months(
+                user_id, period_year, period_month, _N_HISTORY_MONTHS
             )
-            await pipeline.refresh(user_id=user_id, year=period_year, month=period_month)
 
-    # Embed query — pure network, no TX
-    query_text = f"Financial insights for period {period_year}-{period_month:02d}"
-    with tracer.start_as_current_span("embed_query"):
-        query_embedding = await embedder.embed(query_text)
-
-    # TX3 — read-only retrieve
-    with tracer.start_as_current_span("rag_retrieve"):
-        async with uow_factory() as uow:
-            chunks = await uow.chunk_retriever.search(
-                user_id=user_id, query_embedding=query_embedding
+    # Aggregate current month
+    current_aggs: list[MonthlyAggregation] = aggregate(
+        period_year,
+        period_month,
+        [
+            TransactionRow(
+                amount=r.amount,
+                currency=r.currency,
+                type_=r.type_,
+                category_label=r.category_label,
+                day_of_month=r.day_of_month,
             )
-            portrait = await uow.chunk_retriever.get_portrait(user_id)
+            for r in rows
+        ],
+    )
 
-    if portrait is not None:
-        chunks = [portrait, *chunks]
+    # Aggregate history months
+    history_aggs: list[MonthlyAggregation] = []
+    for (hy, hm), hrows in sorted(history_raw.items()):
+        if hrows:
+            history_aggs.extend(
+                aggregate(
+                    hy,
+                    hm,
+                    [
+                        TransactionRow(
+                            amount=r.amount,
+                            currency=r.currency,
+                            type_=r.type_,
+                            category_label=r.category_label,
+                            day_of_month=r.day_of_month,
+                        )
+                        for r in hrows
+                    ],
+                )
+            )
 
-    return AssembledContext(chunks=list(chunks), quality=assess_quality(chunks))
+    period_label = f"{period_year}-{period_month:02d}"
+
+    # Build monthly_summary pseudo-chunk
+    summary_text = format_monthly_summary(current_aggs)
+    chunks: list[InsightContextChunk] = [
+        InsightContextChunk(
+            content=summary_text,
+            chunk_type="monthly_summary",
+            period_label=period_label,
+            metadata={"year": period_year, "month": period_month},
+        )
+    ]
+
+    # Detect shifts and optionally build behavioral_shift pseudo-chunk
+    shifts: list[DetectedShift] = []
+    if current_aggs:
+        primary = current_aggs[0]
+        same_currency_history = [h for h in history_aggs if h.currency == primary.currency]
+        shifts = shift_detector.detect(primary, same_currency_history)
+        if shifts:
+            shift_text = format_shift_text(primary, shifts)
+            chunks.append(
+                InsightContextChunk(
+                    content=shift_text,
+                    chunk_type="behavioral_shift",
+                    period_label=period_label,
+                    metadata={
+                        "year": period_year,
+                        "month": period_month,
+                        "shifts": [s.to_metadata() for s in shifts],
+                    },
+                )
+            )
+
+    quality = ContextQuality.FULL if shifts else ContextQuality.PARTIAL
+    return AssembledContext(chunks=chunks, quality=quality)
 
 
 async def complete_insight(

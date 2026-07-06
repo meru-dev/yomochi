@@ -8,13 +8,6 @@ _HEADER_LOWER = b"x-request-id"
 
 
 class RequestIdMiddleware:
-    """Pure ASGI middleware that ensures every request carries an ``X-Request-ID``.
-
-    Reads the header from the incoming request (or generates a UUID), stashes
-    it in ``scope["state"]["request_id"]`` (mirrored on ``request.state``), and
-    echoes it on the response.
-    """
-
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 

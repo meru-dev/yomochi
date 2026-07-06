@@ -27,7 +27,6 @@ def _inject_otel_context(
 
 
 def configure_logging(log_format: str, debug: bool = False) -> None:
-    """Configure structlog and stdlib logging once at process startup."""
     level = logging.DEBUG if debug else logging.INFO
     timestamper = structlog.processors.TimeStamper(fmt="iso")
 

@@ -30,7 +30,6 @@ async def _make_session_factory(db_url: str) -> async_sessionmaker[AsyncSession]
 
 
 async def test_poller_marks_event_sent(pg_url: str) -> None:
-    """Happy path: PENDING event is published and marked SENT."""
     factory = await _make_session_factory(pg_url)
     publisher = FakeEventPublisher()
 

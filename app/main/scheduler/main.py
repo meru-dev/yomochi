@@ -13,8 +13,8 @@ from app.application.alerts.ports.alert_repository import AlertRepository
 from app.application.common.outbox_event import OutboxEvent
 from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.insights.ports.insight_repository import InsightRepository
-from app.application.insights.ports.portrait_queue import PortraitQueue
 from app.application.recurring.use_cases.fire_due_rules import FireDueRulesUseCase
+from app.domain.services.behavioral_shift_detector import BehavioralShiftDetector
 from app.domain.value_objects.enums import OutboxStatus
 from app.main.config.loader import (
     load_database_settings,
@@ -29,6 +29,8 @@ from app.main.config.settings import (
 )
 from app.main.ioc.worker_providers import SchedulerProvider, WorkerInfraProvider
 from app.main.logging import configure_logging
+from app.main.scheduler.shift_alert_tick import detect_shift_alerts_for_period
+from app.outbound.adapters.sqla.insights.active_user_reader import SqlaActiveUserReader
 from app.outbound.observability.otel import configure_otel
 from app.outbound.persistence_sqla.mappings.all import map_tables
 
@@ -76,28 +78,41 @@ async def fire_due_rules_job(container: AsyncContainer) -> None:
         logger.info("scheduler_done")
 
 
-async def mark_dirty_prev_month_job(container: AsyncContainer) -> None:
+async def detect_shift_alerts_job(container: AsyncContainer) -> None:
+    """Deterministic behavioral-shift alerting, off the embedding loop.
+
+    For each recently-active user, run shift detection for BOTH the previous month
+    and the current month. The previous month covers late-arriving transactions
+    after a month rollover; the current month covers intra-month spikes. The alert
+    writer is idempotent (ON CONFLICT DO NOTHING), so the overlap is safe.
+
+    The detector is a pure no-dependency domain object, constructed in the job
+    (precedent: this module builds maintenance objects directly rather than via a
+    provider). Each (user, period) gets its own short committed TX; no OpenAI here.
+    """
     today = datetime.now(UTC).date()
-    year, month = _prev_month(today)
+    cur_year, cur_month = today.year, today.month
+    prev_year, prev_month = _prev_month(today)
+    since = date(prev_year, prev_month, 1)
 
-    async with container() as request_container:
-        # Set-based mark: one INSERT...SELECT instead of O(N) per-user round-trips.
-        # Mirrors PortraitQueue.mark_all_dirty. Raw SQL here avoids a bulk port for a
-        # one-off scheduled task (precedent in this module).
-        session = await request_container.get(AsyncSession)
-        result = await session.execute(
-            sa.text(
-                """
-                INSERT INTO dirty_periods (user_id, year, month)
-                SELECT id, :year, :month FROM users
-                ON CONFLICT (user_id, year, month) DO NOTHING
-                """
-            ),
-            {"year": year, "month": month},
-        )
-        marked = int(result.rowcount or 0)  # type: ignore[attr-defined]
+    detector = BehavioralShiftDetector()
+    factory = await container.get(async_sessionmaker[AsyncSession])
 
-    logger.info("marked_dirty_prev_month", year=year, month=month, user_count=marked)
+    async with factory() as session:
+        user_ids = await SqlaActiveUserReader(session).recently_active_user_ids(since)
+
+    for user_id in user_ids:
+        await detect_shift_alerts_for_period(factory, detector, user_id, prev_year, prev_month)
+        await detect_shift_alerts_for_period(factory, detector, user_id, cur_year, cur_month)
+
+    logger.info(
+        "shift_alerts_job_done",
+        users_processed=len(user_ids),
+        periods=[
+            f"{prev_year}-{prev_month:02d}",
+            f"{cur_year}-{cur_month:02d}",
+        ],
+    )
 
 
 async def manage_audit_partitions_job(container: AsyncContainer) -> None:
@@ -190,13 +205,6 @@ async def purge_old_alerts_job(container: AsyncContainer) -> None:
     logger.info("alerts_purged", deleted_count=deleted, retention_days=_ALERT_RETENTION_DAYS)
 
 
-async def mark_portrait_dirty_job(container: AsyncContainer) -> None:
-    async with container() as request_container:
-        portrait_queue = await request_container.get(PortraitQueue)
-        count = await portrait_queue.mark_all_dirty()
-    logger.info("portrait_queue_marked_all", user_count=count)
-
-
 async def _reaper_tick(
     insight_repo: InsightRepository,
     outbox_repo: OutboxRepository,
@@ -274,10 +282,9 @@ async def run(
         misfire_grace_time=3600,
     )
     scheduler.add_job(
-        mark_dirty_prev_month_job,
+        detect_shift_alerts_job,
         "cron",
-        day=1,
-        hour=1,
+        hour=2,
         minute=0,
         kwargs={"container": container},
         misfire_grace_time=3600,
@@ -288,15 +295,6 @@ async def run(
         day_of_week="sun",
         hour=3,
         minute=30,
-        kwargs={"container": container},
-        misfire_grace_time=3600,
-    )
-    scheduler.add_job(
-        mark_portrait_dirty_job,
-        "cron",
-        day_of_week="mon",
-        hour=3,
-        minute=0,
         kwargs={"container": container},
         misfire_grace_time=3600,
     )

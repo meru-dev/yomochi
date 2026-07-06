@@ -52,7 +52,6 @@ def test_idempotency_key_includes_user_id():
 
 
 def test_cached_response_returned_without_executing_handler():
-    """If cache hit: return stored response, never call handler."""
     cached_payload = json.dumps(
         {"body": '{"ok": true}', "status": 200, "media_type": "application/json"}
     ).encode()
@@ -96,7 +95,6 @@ def test_lock_acquired_before_executing_handler():
 
 
 def test_lock_released_after_response():
-    """Lock key must be deleted after response is built."""
     redis = _make_redis(set_nx_return=True)
     app = _make_app(redis)
     client = TestClient(app, raise_server_exceptions=True)
@@ -107,7 +105,6 @@ def test_lock_released_after_response():
 
 
 def test_no_key_header_bypasses_middleware():
-    """Requests without Idempotency-Key header skip all Redis operations."""
     redis = _make_redis()
     app = _make_app(redis)
     client = TestClient(app, raise_server_exceptions=True)
@@ -119,8 +116,6 @@ def test_no_key_header_bypasses_middleware():
 
 
 def test_get_request_bypasses_middleware():
-    """GET requests are never processed by idempotency middleware."""
-
     async def get_handler(request: Request) -> JSONResponse:
         return JSONResponse({"ok": True})
 

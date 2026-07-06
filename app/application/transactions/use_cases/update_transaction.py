@@ -1,14 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any
 from uuid import UUID
 
 from app.application.common.audit_event import AuditEvent
-from app.application.common.outbox_event import OutboxEvent
 from app.application.common.ports.audit_log import AuditLog
-from app.application.common.ports.outbox_repository import OutboxRepository
 from app.application.transactions.ports.category_list_reader import CategoryListReader
-from app.application.transactions.ports.dirty_period_marker import DirtyPeriodMarker
 from app.application.transactions.ports.transaction_repository import TransactionRepository
 from app.application.transactions.use_cases.get_transaction import TransactionNotFoundError
 from app.domain.entities.transaction import _UNSET
@@ -35,14 +31,10 @@ class UpdateTransactionUseCase:
     def __init__(
         self,
         transaction_repo: TransactionRepository,
-        outbox_repo: OutboxRepository,
-        dirty_period_marker: DirtyPeriodMarker,
         category_list_reader: CategoryListReader,
         audit_log: AuditLog,
     ) -> None:
         self._transaction_repo = transaction_repo
-        self._outbox_repo = outbox_repo
-        self._dirty_period_marker = dirty_period_marker
         self._category_list_reader = category_list_reader
         self._audit_log = audit_log
 
@@ -55,7 +47,6 @@ class UpdateTransactionUseCase:
         if transaction is None:
             raise TransactionNotFoundError
 
-        old_date = transaction.date
         fields = command.fields_to_update
 
         if "category_id" in fields and command.raw_category_id is not None:
@@ -86,26 +77,7 @@ class UpdateTransactionUseCase:
         )
 
         await self._transaction_repo.save(transaction)
-        # Mark the new month dirty when date moves to a different (year, month)
-        if "date" in fields and command.date_ is not None:
-            new_d = command.date_
-            if (new_d.year, new_d.month) != (old_date.year, old_date.month):
-                await self._dirty_period_marker.mark_dirty(
-                    transaction.user_id, new_d.year, new_d.month
-                )
         now = datetime.now(UTC)
-        payload: dict[str, Any] = {"transaction_date": transaction.date.isoformat()}
-        if transaction.date != old_date:
-            payload["old_date"] = old_date.isoformat()
-        await self._outbox_repo.append(
-            OutboxEvent(
-                event_type="TransactionUpdated",
-                aggregate_id=str(transaction.id_),
-                payload=payload,
-                occurred_at=now,
-                user_id=transaction.user_id.value,
-            )
-        )
         await self._audit_log.record(
             AuditEvent(
                 event_type=AuditEventType.TRANSACTION_UPDATED,

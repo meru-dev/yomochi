@@ -1,7 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -14,7 +13,7 @@ from app.domain.entities.transaction import Transaction
 from app.domain.value_objects.enums import TransactionType
 from app.domain.value_objects.ids import TransactionId, UserId
 from app.domain.value_objects.money import Currency, Money
-from tests.fakes.repositories import FakeAuditLog, FakeOutboxRepository, FakeTransactionRepository
+from tests.fakes.repositories import FakeAuditLog, FakeTransactionRepository
 
 
 def _make_tx(user_id: UserId) -> Transaction:
@@ -31,27 +30,16 @@ def _make_tx(user_id: UserId) -> Transaction:
     )
 
 
-def _make_dirty_marker() -> AsyncMock:
-    m = AsyncMock()
-    m.mark_dirty = AsyncMock()
-    return m
-
-
-def _make_uc(
-    repo: FakeTransactionRepository, outbox: FakeOutboxRepository
-) -> DeleteTransactionUseCase:
+def _make_uc(repo: FakeTransactionRepository) -> DeleteTransactionUseCase:
     return DeleteTransactionUseCase(
         transaction_repo=repo,
-        outbox_repo=outbox,
-        dirty_period_marker=_make_dirty_marker(),  # type: ignore[arg-type]
         audit_log=FakeAuditLog(),
     )
 
 
 async def test_deletes_transaction() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
     user = UserId(uuid.uuid4())
     tx = _make_tx(user)
     await repo.save(tx)
@@ -59,14 +47,11 @@ async def test_deletes_transaction() -> None:
     await uc(DeleteTransactionCommand(transaction_id=tx.id_, user_id=user))
 
     assert await repo.get_by_id(tx.id_, user) is None
-    assert len(outbox.events) == 1
-    assert outbox.events[0].event_type == "TransactionDeleted"
 
 
 async def test_raises_if_not_found() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
 
     with pytest.raises(TransactionNotFoundError):
         await uc(
@@ -79,8 +64,7 @@ async def test_raises_if_not_found() -> None:
 
 async def test_raises_if_belongs_to_other_user() -> None:
     repo = FakeTransactionRepository()
-    outbox = FakeOutboxRepository()
-    uc = _make_uc(repo, outbox)
+    uc = _make_uc(repo)
     owner = UserId(uuid.uuid4())
     other = UserId(uuid.uuid4())
     tx = _make_tx(owner)
@@ -90,3 +74,20 @@ async def test_raises_if_belongs_to_other_user() -> None:
         await uc(DeleteTransactionCommand(transaction_id=tx.id_, user_id=other))
 
     assert await repo.get_by_id(tx.id_, owner) is not None
+
+
+async def test_delete_records_audit_event() -> None:
+    """Deleting a transaction records an audit event."""
+    repo = FakeTransactionRepository()
+    audit = FakeAuditLog()
+    uc = DeleteTransactionUseCase(
+        transaction_repo=repo,
+        audit_log=audit,
+    )
+    user = UserId(uuid.uuid4())
+    tx = _make_tx(user)  # date is 2026-05-01
+    await repo.save(tx)
+
+    await uc(DeleteTransactionCommand(transaction_id=tx.id_, user_id=user))
+
+    assert len(audit.events) == 1

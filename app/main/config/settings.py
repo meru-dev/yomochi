@@ -20,6 +20,27 @@ class AppSettings(BaseSettings):
     # Enable per-endpoint rate limiting. Defaults on; tests that exercise flows
     # not concerned with throttling (e.g. auth smoke tests) disable it.
     rate_limit_enabled: bool = True
+    # CORS — comma-separated exact origins (e.g. "https://app.example.com,http://localhost:3000").
+    # Empty (default) = middleware is not added at all; same-origin setups are unaffected.
+    # Must be an explicit allow-list because allow_credentials=True forbids wildcard origins.
+    cors_allow_origins: str = ""
+
+    # SMTP — password-reset email delivery.
+    # smtp_host empty (default) = SMTP disabled; the mailer provider falls back to
+    # StdoutMailer. Works against any SMTP relay (SES/Resend/Gmail/...).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    # Sender address. Required when smtp_host is set (enforced at startup in providers.py).
+    smtp_from_email: str = ""
+    # STARTTLS on port 587 (the common case). Set False for port 465 implicit-TLS relays.
+    smtp_starttls: bool = True
+    smtp_timeout_seconds: float = 10.0
+
+    @property
+    def cors_allow_origin_list(self) -> tuple[str, ...]:
+        return tuple(o.strip() for o in self.cors_allow_origins.split(",") if o.strip())
 
 
 class DatabaseSettings(BaseSettings):
@@ -79,15 +100,31 @@ class OpenAISettings(BaseSettings):
     model_config = _ENV
     openai_api_key: str = ""
     openai_model_chat: str = "gpt-4o-mini"
-    openai_model_embed: str = "text-embedding-3-small"
     # HTTP transport
     openai_max_connections: int = 20
     openai_max_keepalive_connections: int = 10
     openai_connect_timeout_seconds: float = 5.0
     openai_read_timeout_chat_seconds: float = 60.0
-    openai_read_timeout_embeddings_seconds: float = 30.0
     openai_max_retries: int = 3  # SDK auto-retry on 429/5xx with Retry-After honored
-    openai_rpm: int = 60  # single per-process token bucket
+    # Per-endpoint-class rate-limit buckets. One AsyncLimiter per class so a
+    # vision/parse burst can't starve interactive chat. Defaults PARTITION the
+    # account RPM (sum ≈ 60) rather than each taking the full budget — separate
+    # buckets must not over-subscribe the upstream account limit.
+    openai_rpm_chat: int = 40
+    openai_rpm_vision: int = 15
+    openai_rpm_parse: int = 5
+    # Bounded waiter queue per bucket; beyond this, calls are rejected fast
+    # (AIRateLimitedError) instead of piling up unboundedly.
+    openai_limiter_max_queue: int = 64
+
+    @property
+    def openai_rpm_per_endpoint(self) -> dict[str, int]:
+        return {
+            "chat": self.openai_rpm_chat,
+            "vision": self.openai_rpm_vision,
+            "parse": self.openai_rpm_parse,
+        }
+
     # Circuit breaker
     openai_circuit_fail_max: int = 5
     openai_circuit_reset_seconds: int = 60
@@ -97,7 +134,6 @@ class KafkaSettings(BaseSettings):
     model_config = _ENV
     kafka_bootstrap_servers: str = "localhost:9092"
     # Topics — M3
-    kafka_topic_transactions: str = "yomochi.transactions.v1"
     kafka_topic_insights: str = "yomochi.insights.v1"
     kafka_topic_dlq: str = "yomochi.dlq.v1"
     # Outbox worker — M3
@@ -122,6 +158,9 @@ class ChatSettings(BaseSettings):
     # Per-user daily token cap (prompt + completion). Tracks runaway cost
     # from injection loops, scrapers, credential theft.
     chat_daily_token_limit: int = 100_000
+    # Max OpenAI tool-selection round-trips before forcing a final answer.
+    # Bounds latency/cost in tools mode.
+    chat_max_tool_iterations: int = 3
 
 
 class IngestionSettings(BaseSettings):

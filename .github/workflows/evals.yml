@@ -29,8 +29,11 @@ jobs:
         run: |
           set -o pipefail
           uv run pytest -m evals tests/evals/ -q --no-cov | tee evals-output.txt
-        continue-on-error: true  # warn, never block PR
-      - name: Post warning comment on threshold breach
+        # Capture output for the comment below; the explicit gate step blocks.
+        # Snapshot mode is hermetic (replays tests/evals/snapshots/ — no live key),
+        # so this gate is deterministic and safe to make merge-blocking.
+        continue-on-error: true
+      - name: Post comment on threshold breach
         if: steps.run-evals.outcome == 'failure'
         uses: actions/github-script@v7
         with:
@@ -38,10 +41,15 @@ jobs:
             const fs = require('fs');
             const output = fs.readFileSync('evals-output.txt', 'utf8');
             const tail = output.length > 3000 ? '…(truncated)\n' + output.slice(-3000) : output;
-            const body = "⚠️ Evals snapshot failures detected.\n\n```\n" + tail + "\n```";
+            const body = "❌ Evals snapshot regression — this PR is blocked until the threshold passes (or snapshots are intentionally updated).\n\n```\n" + tail + "\n```";
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body,
             });
+      - name: Fail the job on eval regression (merge gate)
+        if: steps.run-evals.outcome == 'failure'
+        run: |
+          echo "Evals snapshot threshold breached — see PR comment. Blocking merge."
+          exit 1

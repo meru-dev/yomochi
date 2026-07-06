@@ -49,34 +49,23 @@ def _build(insight: Insight) -> tuple[ProcessInsightUseCase, AsyncMock]:
     insight_repo.get_by_id = AsyncMock(return_value=insight)
     insight_repo.save = AsyncMock()
 
-    chunk_retriever = AsyncMock()
-    chunk_retriever.search = AsyncMock(return_value=[])  # ← no chunks
-    chunk_retriever.get_portrait = AsyncMock(return_value=None)
-
     budget_reader = AsyncMock()
-    budget_reader.read_month = AsyncMock(return_value=[])
+    budget_reader.read_month = AsyncMock(return_value=[])  # ← no rows → NONE quality
     budget_reader.read_history_months = AsyncMock(return_value={})
 
     uow = InsightWorkUnit(
         insight_repo=insight_repo,
-        chunk_writer=AsyncMock(),
-        chunk_retriever=chunk_retriever,
         budget_reader=budget_reader,
-        alert_writer=AsyncMock(),
-        dirty_period_repo=AsyncMock(),
     )
 
     @asynccontextmanager
     async def _scope():
         yield uow
 
-    embedder = AsyncMock()
-    embedder.embed = AsyncMock(return_value=[0.1] * 1536)
     ai_client = AsyncMock()  # must not be called on NONE path
     return (
         ProcessInsightUseCase(
             work_unit_factory=lambda: _scope(),
-            embedder=embedder,
             ai_client=ai_client,
         ),
         insight_repo,

@@ -11,8 +11,6 @@ from app.main.config.settings import (
     RedisSettings,
 )
 from app.main.insight import main as insight_main
-from app.main.portrait import main as portrait_main
-from app.main.transaction import main as transaction_main
 
 
 @pytest.fixture
@@ -50,21 +48,6 @@ def obs_settings() -> ObservabilitySettings:
     )
 
 
-def test_transaction_worker_app_constructs(
-    db_settings: DatabaseSettings,
-    redis_settings: RedisSettings,
-    kafka_settings: KafkaSettings,
-    obs_settings: ObservabilitySettings,
-) -> None:
-    app = transaction_main.make_app(
-        db_settings=db_settings,
-        redis_settings=redis_settings,
-        kafka_settings=kafka_settings,
-        obs_settings=obs_settings,
-    )
-    assert isinstance(app, FastStream)
-
-
 def test_insight_worker_app_constructs(
     db_settings: DatabaseSettings,
     redis_settings: RedisSettings,
@@ -80,14 +63,3 @@ def test_insight_worker_app_constructs(
         obs_settings=obs_settings,
     )
     assert isinstance(app, FastStream)
-
-
-def test_portrait_worker_modules_importable() -> None:
-    """Portrait worker has no FastStream app — only an asyncio loop entry.
-
-    We assert the public surface exists; constructing the Dishka container
-    is covered by `test_worker_providers_isolation.py`.
-    """
-    assert callable(portrait_main.run)
-    assert callable(portrait_main.main)
-    assert callable(portrait_main._portrait_refresh_loop)
